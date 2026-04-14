@@ -12,13 +12,21 @@ FAILED=0
 BACKEND_DIR="$(cd "$(dirname "$0")/backend" && pwd)"
 FRONTEND_DIR="$(cd "$(dirname "$0")/frontend" && pwd)"
 
+run_backend_go() {
+    MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*" docker run --rm \
+        -v "$BACKEND_DIR:/app" \
+        -w /app \
+        golang:1.25-alpine \
+        sh -c "$1"
+}
+
 # ==================== COMPILE CHECKS ====================
 echo "==================== COMPILE CHECKS ===================="
 echo ""
 
 echo "--- Compile Check: Backend ---"
 cd "$BACKEND_DIR"
-if go build ./... 2>&1; then
+if run_backend_go "go mod download && go build ./..." 2>&1; then
     echo "[PASS] Backend compiles successfully"
     PASSED=$((PASSED + 1))
 else
@@ -54,7 +62,7 @@ echo ""
 # Backend unit tests
 echo "--- Backend Unit Tests ---"
 cd "$BACKEND_DIR"
-if go test ./tests/... -v -count=1 -timeout 120s 2>&1; then
+if run_backend_go "go test ./tests/... -v -count=1 -timeout 120s" 2>&1; then
     echo "[PASS] Backend unit tests passed"
     PASSED=$((PASSED + 1))
 else
@@ -67,7 +75,7 @@ TOTAL=$((TOTAL + 1))
 echo ""
 echo "--- Backend Vet Check ---"
 cd "$BACKEND_DIR"
-if go vet ./... 2>&1; then
+if run_backend_go "go vet ./..." 2>&1; then
     echo "[PASS] Backend vet check passed"
     PASSED=$((PASSED + 1))
 else
