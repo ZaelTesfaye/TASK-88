@@ -279,3 +279,47 @@ func TestEmptyLRC(t *testing.T) {
 		t.Error("ValidateLRCFormat should return error for empty content")
 	}
 }
+
+// TestParseLRCWithUTF16LE exercises the UTF-16 LE BOM detection path.
+func TestParseLRCWithUTF16LE(t *testing.T) {
+	// UTF-16 LE BOM = 0xFF 0xFE, followed by UTF-16LE encoded LRC content.
+	lrc := "[00:01.00]Hello"
+	var utf16le []byte
+	utf16le = append(utf16le, 0xFF, 0xFE) // BOM
+	for _, r := range lrc {
+		utf16le = append(utf16le, byte(r), 0x00) // LE: low byte first
+	}
+
+	lines, err := playback.ParseLRC(string(utf16le))
+	if err != nil {
+		t.Fatalf("ParseLRC with UTF-16LE BOM failed: %v", err)
+	}
+	if len(lines) != 1 {
+		t.Fatalf("expected 1 line, got %d", len(lines))
+	}
+	if lines[0].Text != "Hello" {
+		t.Errorf("expected text 'Hello', got %q", lines[0].Text)
+	}
+}
+
+// TestParseLRCWithUTF16BE exercises the UTF-16 BE BOM detection path.
+func TestParseLRCWithUTF16BE(t *testing.T) {
+	// UTF-16 BE BOM = 0xFE 0xFF, followed by UTF-16BE encoded LRC content.
+	lrc := "[00:02.00]World"
+	var utf16be []byte
+	utf16be = append(utf16be, 0xFE, 0xFF) // BOM
+	for _, r := range lrc {
+		utf16be = append(utf16be, 0x00, byte(r)) // BE: high byte first
+	}
+
+	lines, err := playback.ParseLRC(string(utf16be))
+	if err != nil {
+		t.Fatalf("ParseLRC with UTF-16BE BOM failed: %v", err)
+	}
+	if len(lines) != 1 {
+		t.Fatalf("expected 1 line, got %d", len(lines))
+	}
+	if lines[0].Text != "World" {
+		t.Errorf("expected text 'World', got %q", lines[0].Text)
+	}
+}

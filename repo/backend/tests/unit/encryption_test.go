@@ -159,3 +159,44 @@ func TestKeyGeneration(t *testing.T) {
 		t.Error("round-trip encryption/decryption failed with generated key")
 	}
 }
+
+func TestWrapUnwrapKey(t *testing.T) {
+	masterKey, err := security.GenerateKey()
+	if err != nil {
+		t.Fatalf("GenerateKey (master) failed: %v", err)
+	}
+
+	dataKey, err := security.GenerateKey()
+	if err != nil {
+		t.Fatalf("GenerateKey (data) failed: %v", err)
+	}
+
+	wrapped, err := security.WrapKey(dataKey, masterKey)
+	if err != nil {
+		t.Fatalf("WrapKey failed: %v", err)
+	}
+	if bytes.Equal(wrapped, dataKey) {
+		t.Error("wrapped key must not equal plain data key")
+	}
+
+	unwrapped, err := security.UnwrapKey(wrapped, masterKey)
+	if err != nil {
+		t.Fatalf("UnwrapKey failed: %v", err)
+	}
+	if !bytes.Equal(unwrapped, dataKey) {
+		t.Error("unwrapped key must match original data key")
+	}
+}
+
+func TestWrapKeyBadMasterKeyLength(t *testing.T) {
+	dataKey, _ := security.GenerateKey()
+	_, err := security.WrapKey(dataKey, []byte("short"))
+	if err == nil {
+		t.Fatal("WrapKey should reject short master key")
+	}
+
+	_, err = security.UnwrapKey([]byte("fake-wrapped"), []byte("short"))
+	if err == nil {
+		t.Fatal("UnwrapKey should reject short master key")
+	}
+}

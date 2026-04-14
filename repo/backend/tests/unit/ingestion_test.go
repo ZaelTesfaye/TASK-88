@@ -1,9 +1,12 @@
 package unit
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/xuri/excelize/v2"
 
 	"backend/internal/ingestion"
 	"backend/internal/models"
@@ -369,5 +372,54 @@ func TestImportFileSizeLimit(t *testing.T) {
 	err = ingestion.ValidateImportFile("test.csv", smallData, "sku")
 	if err != nil {
 		t.Errorf("small valid CSV should not fail size check, got: %v", err)
+	}
+}
+
+func TestParseXLSXValid(t *testing.T) {
+	// Build a tiny XLSX in memory.
+	f := excelize.NewFile()
+	sheet := "Sheet1"
+	f.SetCellValue(sheet, "A1", "code")
+	f.SetCellValue(sheet, "B1", "name")
+	f.SetCellValue(sheet, "A2", "SKU001")
+	f.SetCellValue(sheet, "B2", "Widget")
+
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		t.Fatalf("excelize.Write: %v", err)
+	}
+
+	records, headers, err := ingestion.ParseXLSX(buf.Bytes())
+	if err != nil {
+		t.Fatalf("ParseXLSX: %v", err)
+	}
+	if len(headers) != 2 || headers[0] != "code" || headers[1] != "name" {
+		t.Errorf("headers = %v, want [code name]", headers)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(records))
+	}
+	if records[0]["code"] != "SKU001" {
+		t.Errorf("code = %q, want SKU001", records[0]["code"])
+	}
+}
+
+func TestParseXLSXInvalidData(t *testing.T) {
+	_, _, err := ingestion.ParseXLSX([]byte("not-xlsx-data"))
+	if err == nil {
+		t.Fatal("ParseXLSX should fail on invalid data")
+	}
+}
+
+func TestValidationErrorErrorMethod(t *testing.T) {
+	ve := ingestion.ValidationError{
+		Field:   "code",
+		Value:   "bad!",
+		Rule:    "regex",
+		Message: "must be alphanumeric",
+	}
+	s := ve.Error()
+	if !strings.Contains(s, "code") || !strings.Contains(s, "bad!") {
+		t.Errorf("Error() should contain field and value, got %q", s)
 	}
 }

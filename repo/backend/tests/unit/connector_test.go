@@ -317,6 +317,135 @@ func TestConnectorDefinitionCapabilitiesJSON(t *testing.T) {
 	}
 }
 
+// ---------- folder connector validate/health/pull ----------
+
+func TestFolderConnectorValidateConfig(t *testing.T) {
+	cfg := map[string]interface{}{"path": "."}
+	conn, _ := ingestion.NewFolderConnector(cfg)
+	if err := conn.ValidateConfig(cfg); err != nil {
+		t.Errorf("ValidateConfig for '.' should pass: %v", err)
+	}
+	if err := conn.ValidateConfig(map[string]interface{}{"path": ""}); err == nil {
+		t.Error("expected error for empty path")
+	}
+	if err := conn.ValidateConfig(map[string]interface{}{}); err == nil {
+		t.Error("expected error for missing path")
+	}
+}
+
+func TestFolderConnectorHealthCheck(t *testing.T) {
+	cfg := map[string]interface{}{"path": "."}
+	conn, _ := ingestion.NewFolderConnector(cfg)
+	result, err := conn.HealthCheck()
+	if err != nil {
+		t.Fatalf("HealthCheck error: %v", err)
+	}
+	if !result.Healthy {
+		t.Errorf("expected healthy=true for '.', got %s", result.Message)
+	}
+	if result.CheckedAt.IsZero() {
+		t.Error("CheckedAt must not be zero")
+	}
+}
+
+func TestFolderConnectorPullEmpty(t *testing.T) {
+	// Use the test directory itself; no csv/xlsx files → 0 records.
+	cfg := map[string]interface{}{"path": ".", "file_pattern": "*.nonexistent"}
+	conn, _ := ingestion.NewFolderConnector(cfg)
+	result, err := conn.Pull("", 10)
+	if err != nil {
+		t.Fatalf("Pull error: %v", err)
+	}
+	if result.HasMore {
+		t.Error("expected HasMore=false for empty pull")
+	}
+}
+
+func TestFolderConnectorAcknowledgeCheckpoint(t *testing.T) {
+	cfg := map[string]interface{}{"path": "."}
+	conn, _ := ingestion.NewFolderConnector(cfg)
+	if err := conn.AcknowledgeCheckpoint("42"); err != nil {
+		t.Errorf("AcknowledgeCheckpoint should succeed: %v", err)
+	}
+}
+
+// ---------- share connector ----------
+
+func TestShareConnectorType(t *testing.T) {
+	cfg := map[string]interface{}{"path": ".", "host": "srv", "share": "data"}
+	conn, err := ingestion.NewShareConnector(cfg)
+	if err != nil {
+		t.Fatalf("NewShareConnector error: %v", err)
+	}
+	if conn.Type() != ingestion.ConnectorShare {
+		t.Errorf("Type() = %q, want %q", conn.Type(), ingestion.ConnectorShare)
+	}
+}
+
+func TestShareConnectorValidateConfig(t *testing.T) {
+	cfg := map[string]interface{}{"path": "."}
+	conn, _ := ingestion.NewShareConnector(cfg)
+	if err := conn.ValidateConfig(cfg); err != nil {
+		t.Errorf("ValidateConfig for '.' should pass: %v", err)
+	}
+}
+
+func TestShareConnectorHealthCheck(t *testing.T) {
+	cfg := map[string]interface{}{"path": ".", "host": "srv", "share": "data"}
+	conn, _ := ingestion.NewShareConnector(cfg)
+	result, err := conn.HealthCheck()
+	if err != nil {
+		t.Fatalf("HealthCheck error: %v", err)
+	}
+	if !result.Healthy {
+		t.Errorf("expected healthy=true for '.', got %s", result.Message)
+	}
+}
+
+func TestShareConnectorPull(t *testing.T) {
+	cfg := map[string]interface{}{"path": ".", "file_pattern": "*.nonexistent"}
+	conn, _ := ingestion.NewShareConnector(cfg)
+	result, err := conn.Pull("", 10)
+	if err != nil {
+		t.Fatalf("Pull error: %v", err)
+	}
+	if len(result.Records) != 0 {
+		t.Errorf("expected 0 records, got %d", len(result.Records))
+	}
+}
+
+func TestShareConnectorAcknowledgeCheckpoint(t *testing.T) {
+	cfg := map[string]interface{}{"path": "."}
+	conn, _ := ingestion.NewShareConnector(cfg)
+	if err := conn.AcknowledgeCheckpoint("99"); err != nil {
+		t.Errorf("AcknowledgeCheckpoint should succeed: %v", err)
+	}
+}
+
+// ---------- connector factory CreateFromSource ----------
+
+func TestConnectorFactoryCreateFromSource(t *testing.T) {
+	factory := ingestion.NewConnectorFactory()
+	source := models.ImportSource{SourceType: ingestion.ConnectorFolder}
+	cfg := map[string]interface{}{"path": "."}
+	conn, err := factory.CreateFromSource(source, cfg)
+	if err != nil {
+		t.Fatalf("CreateFromSource error: %v", err)
+	}
+	if conn.Type() != ingestion.ConnectorFolder {
+		t.Errorf("expected folder type, got %q", conn.Type())
+	}
+}
+
+func TestConnectorFactoryCreateFromSourceUnsupported(t *testing.T) {
+	factory := ingestion.NewConnectorFactory()
+	source := models.ImportSource{SourceType: "magic"}
+	_, err := factory.CreateFromSource(source, map[string]interface{}{})
+	if err == nil {
+		t.Fatal("expected error for unsupported source type")
+	}
+}
+
 // ---------- database connector pull ----------
 
 func TestDatabaseConnectorPullWithoutDB(t *testing.T) {

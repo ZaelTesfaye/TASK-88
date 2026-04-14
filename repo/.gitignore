@@ -27,3 +27,6 @@ mysql_data/
 # Temp
 *.log
 *.tmp
+
+# Coverage artifacts
+coverage/
