@@ -1,0 +1,73 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: hub-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: hub_db
+      MYSQL_USER: hub_user
+      MYSQL_PASSWORD: hub_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hub-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_USER: hub_user
+      DB_PASSWORD: hub_password
+      DB_NAME: hub_db
+      JWT_SECRET: change-me-in-production-use-strong-secret-here
+      JWT_ISSUER: multi-org-hub
+      APP_PORT: "8080"
+      APP_TIMEZONE: America/New_York
+      ENABLE_TLS: "false"
+      ENABLE_BIOMETRIC: "false"
+      APP_ENV: production
+      CORS_ORIGINS: "http://localhost:3000"
+      ALLOWED_HOSTS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1/8"
+      LOG_LEVEL: info
+      KEY_ROTATION_DAYS: "90"
+      RETENTION_PURGE_DAYS: "30"
+      MISSED_RUN_POLICY: catch-up-once
+      DIR_SYNC_INTERVAL_MINUTES: "15"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - media_data:/app/media
+      - export_data:/app/exports
+      - import_data:/app/imports
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hub-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  media_data:
+  export_data:
+  import_data:

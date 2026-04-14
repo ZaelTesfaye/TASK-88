@@ -1,0 +1,29 @@
+# Go
+backend/vendor/
+*.exe
+*.dll
+*.so
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+mysql_data/
+
+# Temp
+*.log
+*.tmp

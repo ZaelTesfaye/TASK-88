@@ -1,0 +1,284 @@
+@use 'variables' as *;
+
+// ============================================================
+// Form Shared Styles
+// ============================================================
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  margin-bottom: $space-4;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.form-label {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-neutral-700;
+  user-select: none;
+
+  .required {
+    color: $color-danger-500;
+    margin-left: 2px;
+  }
+}
+
+.form-hint {
+  font-size: $font-size-xs;
+  color: $color-neutral-400;
+  margin-top: $space-1;
+}
+
+.form-error {
+  font-size: $font-size-xs;
+  color: $color-danger-500;
+  margin-top: $space-1;
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+}
+
+.form-row {
+  display: flex;
+  gap: $space-4;
+
+  > * {
+    flex: 1;
+  }
+}
+
+// ============================================================
+// Badge / Tag
+// ============================================================
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  padding: 2px $space-2;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  border-radius: $border-radius-full;
+  white-space: nowrap;
+  line-height: 1.4;
+
+  &--primary {
+    background: $color-primary-50;
+    color: $color-primary-700;
+  }
+
+  &--success {
+    background: $color-success-50;
+    color: $color-success-700;
+  }
+
+  &--warning {
+    background: $color-warning-50;
+    color: $color-warning-700;
+  }
+
+  &--danger {
+    background: $color-danger-50;
+    color: $color-danger-700;
+  }
+
+  &--neutral {
+    background: $color-neutral-100;
+    color: $color-neutral-600;
+  }
+}
+
+// ============================================================
+// Divider
+// ============================================================
+.divider {
+  border: none;
+  border-top: 1px solid $border-color;
+  margin: $space-4 0;
+}
+
+// ============================================================
+// Overlay
+// ============================================================
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: $z-dialog-overlay;
+  backdrop-filter: blur(2px);
+  animation: overlay-in $transition-base forwards;
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+// ============================================================
+// Dropdown
+// ============================================================
+.dropdown {
+  position: relative;
+  display: inline-flex;
+
+  &__menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 180px;
+    background: $color-neutral-0;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-md;
+    box-shadow: $shadow-lg;
+    z-index: $z-dropdown;
+    padding: $space-1 0;
+    animation: dropdown-in $transition-fast forwards;
+
+    &--right {
+      left: auto;
+      right: 0;
+    }
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    width: 100%;
+    padding: $space-2 $space-3;
+    font-size: $font-size-base;
+    color: $color-neutral-700;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: $color-neutral-50;
+      color: $color-neutral-900;
+    }
+
+    &--danger {
+      color: $color-danger-500;
+
+      &:hover {
+        background: $color-danger-50;
+      }
+    }
+  }
+
+  &__divider {
+    border-top: 1px solid $border-color;
+    margin: $space-1 0;
+  }
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ============================================================
+// KPI Tile
+// ============================================================
+.kpi-tile {
+  background: $color-neutral-0;
+  border: 1px solid $border-color;
+  border-radius: $border-radius-md;
+  padding: $space-5;
+  transition: box-shadow $transition-base, border-color $transition-base;
+
+  &:hover {
+    box-shadow: $shadow-md;
+    border-color: $color-primary-200;
+  }
+
+  &__label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-neutral-500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: $space-2;
+  }
+
+  &__value {
+    font-size: $font-size-3xl;
+    font-weight: $font-weight-bold;
+    color: $color-neutral-900;
+    line-height: 1;
+    margin-bottom: $space-1;
+  }
+
+  &__delta {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+
+    &--up { color: $color-success-600; }
+    &--down { color: $color-danger-600; }
+    &--flat { color: $color-neutral-400; }
+  }
+}
+
+// ============================================================
+// Toolbar
+// ============================================================
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3 0;
+  flex-wrap: wrap;
+
+  &__search {
+    flex: 1;
+    min-width: 200px;
+    max-width: 360px;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+}
+
+// ============================================================
+// Pulse Animation (loading)
+// ============================================================
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.skeleton {
+  background: $color-neutral-100;
+  border-radius: $border-radius-base;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+// ============================================================
+// Status dot
+// ============================================================
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: $border-radius-full;
+  flex-shrink: 0;
+
+  &--active { background: $color-success-500; }
+  &--inactive { background: $color-neutral-300; }
+  &--pending { background: $color-warning-500; }
+  &--error { background: $color-danger-500; }
+  &--running {
+    background: $color-primary-500;
+    animation: pulse 1.5s ease infinite;
+  }
+}
