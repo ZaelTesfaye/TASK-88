@@ -5,7 +5,12 @@
     <div class="page-header">
       <h2 class="page-header__title">Reports</h2>
       <div class="page-header__actions">
-        <AppButton v-if="activeTab === 'schedules'" variant="primary" @click="openNewSchedule">New Schedule</AppButton>
+        <AppButton
+          v-if="activeTab === 'schedules'"
+          variant="primary"
+          @click="openNewSchedule"
+          >New Schedule</AppButton
+        >
       </div>
     </div>
 
@@ -17,15 +22,30 @@
         class="tab-btn"
         :class="{ 'tab-btn--active': activeTab === tab.key }"
         @click="activeTab = tab.key"
-      >{{ tab.label }}</button>
+      >
+        {{ tab.label }}
+      </button>
     </div>
 
     <!-- Schedules Tab -->
     <div v-if="activeTab === 'schedules'" class="tab-panel">
       <AppLoadingState v-if="schedulesLoading" message="Loading schedules..." />
-      <AppErrorState v-else-if="schedulesError" :message="schedulesError" retryable @retry="loadSchedules" />
-      <AppEmptyState v-else-if="schedules.length === 0" title="No schedules" description="Create a report schedule to automate report generation.">
-        <template #action><AppButton variant="primary" @click="openNewSchedule">New Schedule</AppButton></template>
+      <AppErrorState
+        v-else-if="schedulesError"
+        :message="schedulesError"
+        retryable
+        @retry="loadSchedules"
+      />
+      <AppEmptyState
+        v-else-if="schedules.length === 0"
+        title="No schedules"
+        description="Create a report schedule to automate report generation."
+      >
+        <template #action
+          ><AppButton variant="primary" @click="openNewSchedule"
+            >New Schedule</AppButton
+          ></template
+        >
       </AppEmptyState>
 
       <AppTable
@@ -37,15 +57,25 @@
         <template #cell-cron="{ row }">
           <div class="cron-cell">
             <code class="cron-code">{{ row.cronExpression }}</code>
-            <span class="text-xs text-muted">{{ cronToHuman(row.cronExpression) }}</span>
+            <span class="text-xs text-muted">{{
+              cronToHuman(row.cronExpression)
+            }}</span>
           </div>
         </template>
         <template #cell-format="{ row }">
-          <AppChip :label="row.format" :variant="row.format === 'PDF' ? 'info' : 'neutral'" size="sm" />
+          <AppChip
+            :label="row.format"
+            :variant="row.format === 'PDF' ? 'info' : 'neutral'"
+            size="sm"
+          />
         </template>
         <template #cell-enabled="{ row }">
           <label class="inline-toggle" @click.stop>
-            <input type="checkbox" :checked="row.enabled" @change="toggleScheduleEnabled(row)" />
+            <input
+              type="checkbox"
+              :checked="row.enabled"
+              @change="toggleScheduleEnabled(row)"
+            />
             <span class="inline-toggle__track" />
           </label>
         </template>
@@ -57,7 +87,9 @@
           />
         </template>
         <template #cell-actions="{ row }">
-          <AppButton variant="ghost" size="sm" @click="openEditSchedule(row)">Edit</AppButton>
+          <AppButton variant="ghost" size="sm" @click="openEditSchedule(row)"
+            >Edit</AppButton
+          >
         </template>
       </AppTable>
     </div>
@@ -66,16 +98,35 @@
     <div v-if="activeTab === 'history'" class="tab-panel">
       <!-- Filters -->
       <div class="history-filters">
-        <AppSelect v-model="historyScheduleFilter" :options="scheduleFilterOptions" placeholder="All schedules" />
-        <AppSelect v-model="historyStateFilter" :options="stateFilterOptions" placeholder="All states" />
+        <AppSelect
+          v-model="historyScheduleFilter"
+          :options="scheduleFilterOptions"
+          placeholder="All schedules"
+        />
+        <AppSelect
+          v-model="historyStateFilter"
+          :options="stateFilterOptions"
+          placeholder="All states"
+        />
         <AppInput v-model="historyDateFrom" type="date" placeholder="From" />
         <AppInput v-model="historyDateTo" type="date" placeholder="To" />
-        <AppButton variant="outline" size="sm" @click="loadRuns">Apply</AppButton>
+        <AppButton variant="outline" size="sm" @click="loadRuns"
+          >Apply</AppButton
+        >
       </div>
 
       <AppLoadingState v-if="runsLoading" message="Loading run history..." />
-      <AppErrorState v-else-if="runsError" :message="runsError" retryable @retry="loadRuns" />
-      <AppEmptyState v-else-if="runs.length === 0" title="No run history" description="Runs will appear here once schedules have executed." />
+      <AppErrorState
+        v-else-if="runsError"
+        :message="runsError"
+        retryable
+        @retry="loadRuns"
+      />
+      <AppEmptyState
+        v-else-if="runs.length === 0"
+        title="No run history"
+        description="Runs will appear here once schedules have executed."
+      />
 
       <AppTable
         v-else
@@ -85,7 +136,12 @@
         :current-page="runPage"
         :total-pages="runTotalPages"
         :total-items="runTotalItems"
-        @page-change="p => { runPage = p; loadRuns(); }"
+        @page-change="
+          (p) => {
+            runPage = p;
+            loadRuns();
+          }
+        "
       >
         <template #cell-state="{ row }">
           <AppChip :status="row.state" :label="row.state" />
@@ -101,36 +157,77 @@
               size="sm"
               :loading="row._downloading"
               @click="downloadReport(row)"
-            >Download</AppButton>
+              >Download</AppButton
+            >
             <button
               v-if="row.state === 'failed'"
               class="error-toggle"
               @click="row._showError = !row._showError"
-            >{{ row._showError ? 'Hide Error' : 'View Error' }}</button>
+            >
+              {{ row._showError ? "Hide Error" : "View Error" }}
+            </button>
           </div>
           <div v-if="row._showError" class="run-error">
-            <pre class="error-pre">{{ row.error || row.errorDetails || 'No error details' }}</pre>
+            <pre class="error-pre">{{
+              row.error || row.errorDetails || "No error details"
+            }}</pre>
           </div>
         </template>
       </AppTable>
     </div>
 
     <!-- Schedule Dialog (Add/Edit) -->
-    <AppDialog v-model="showScheduleDialog" :title="editingSchedule ? 'Edit Schedule' : 'New Schedule'" size="lg" persistent>
+    <AppDialog
+      v-model="showScheduleDialog"
+      :title="editingSchedule ? 'Edit Schedule' : 'New Schedule'"
+      size="lg"
+      persistent
+    >
       <div class="form-stack">
-        <AppInput v-model="scheduleForm.name" label="Name" required :error="formErrors.name" />
+        <AppInput
+          v-model="scheduleForm.name"
+          label="Name"
+          required
+          :error="formErrors.name"
+        />
 
         <div class="form-group">
-          <AppInput v-model="scheduleForm.cronExpression" label="Cron Expression" required :error="formErrors.cronExpression" hint="e.g. 0 6 * * * (daily at 6am)" />
+          <AppInput
+            v-model="scheduleForm.cronExpression"
+            label="Cron Expression"
+            required
+            :error="formErrors.cronExpression"
+            hint="e.g. 0 6 * * * (daily at 6am)"
+          />
           <div class="cron-presets">
             <span class="text-xs text-muted">Presets:</span>
-            <button class="preset-btn" @click="scheduleForm.cronExpression = '0 6 * * *'">Daily 6am</button>
-            <button class="preset-btn" @click="scheduleForm.cronExpression = '0 6 * * 1'">Weekly Mon</button>
-            <button class="preset-btn" @click="scheduleForm.cronExpression = '0 6 1 * *'">Monthly 1st</button>
+            <button
+              class="preset-btn"
+              @click="scheduleForm.cronExpression = '0 6 * * *'"
+            >
+              Daily 6am
+            </button>
+            <button
+              class="preset-btn"
+              @click="scheduleForm.cronExpression = '0 6 * * 1'"
+            >
+              Weekly Mon
+            </button>
+            <button
+              class="preset-btn"
+              @click="scheduleForm.cronExpression = '0 6 1 * *'"
+            >
+              Monthly 1st
+            </button>
           </div>
         </div>
 
-        <AppSelect v-model="scheduleForm.timezone" label="Timezone" :options="timezoneOptions" placeholder="Select timezone..." />
+        <AppSelect
+          v-model="scheduleForm.timezone"
+          label="Timezone"
+          :options="timezoneOptions"
+          placeholder="Select timezone..."
+        />
 
         <div class="form-group">
           <label class="form-label">Output Format</label>
@@ -146,7 +243,11 @@
           </div>
         </div>
 
-        <AppInput v-model="scheduleForm.scope" label="Scope" hint="Node ID or leave empty for current context" />
+        <AppInput
+          v-model="scheduleForm.scope"
+          label="Scope"
+          hint="Node ID or leave empty for current context"
+        />
 
         <div class="form-toggle">
           <label class="toggle-label">
@@ -156,72 +257,94 @@
         </div>
       </div>
       <template #footer>
-        <AppButton variant="outline" @click="showScheduleDialog = false">Cancel</AppButton>
-        <AppButton variant="primary" :loading="savingSchedule" @click="saveSchedule">{{ editingSchedule ? 'Update' : 'Create' }}</AppButton>
+        <AppButton variant="outline" @click="showScheduleDialog = false"
+          >Cancel</AppButton
+        >
+        <AppButton
+          variant="primary"
+          :loading="savingSchedule"
+          @click="saveSchedule"
+          >{{ editingSchedule ? "Update" : "Create" }}</AppButton
+        >
       </template>
     </AppDialog>
 
     <!-- Enable/Disable Confirmation -->
-    <AppDialog v-model="showToggleConfirm" title="Confirm Status Change" size="sm">
-      <p>Are you sure you want to <strong>{{ toggleTarget?.enabled ? 'disable' : 'enable' }}</strong> the schedule "{{ toggleTarget?.name }}"?</p>
+    <AppDialog
+      v-model="showToggleConfirm"
+      title="Confirm Status Change"
+      size="sm"
+    >
+      <p>
+        Are you sure you want to
+        <strong>{{ toggleTarget?.enabled ? "disable" : "enable" }}</strong> the
+        schedule "{{ toggleTarget?.name }}"?
+      </p>
       <template #footer>
-        <AppButton variant="outline" @click="showToggleConfirm = false">Cancel</AppButton>
-        <AppButton variant="primary" :loading="toggling" @click="confirmToggleEnabled">Confirm</AppButton>
+        <AppButton variant="outline" @click="showToggleConfirm = false"
+          >Cancel</AppButton
+        >
+        <AppButton
+          variant="primary"
+          :loading="toggling"
+          @click="confirmToggleEnabled"
+          >Confirm</AppButton
+        >
       </template>
     </AppDialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
-import { useContextStore } from '@/stores/context.js';
-import { useAuthStore } from '@/stores/auth.js';
-import * as reportsApi from '@/api/reports.js';
-import AppButton from '@/components/common/AppButton.vue';
-import AppInput from '@/components/common/AppInput.vue';
-import AppSelect from '@/components/common/AppSelect.vue';
-import AppChip from '@/components/common/AppChip.vue';
-import AppTable from '@/components/common/AppTable.vue';
-import AppDialog from '@/components/common/AppDialog.vue';
-import AppLoadingState from '@/components/common/AppLoadingState.vue';
-import AppErrorState from '@/components/common/AppErrorState.vue';
-import AppEmptyState from '@/components/common/AppEmptyState.vue';
-import AppToast from '@/components/common/AppToast.vue';
+import { ref, computed, watch, onMounted } from "vue";
+import { useContextStore } from "@/stores/context.js";
+import { useAuthStore } from "@/stores/auth.js";
+import * as reportsApi from "@/api/reports.js";
+import AppButton from "@/components/common/AppButton.vue";
+import AppInput from "@/components/common/AppInput.vue";
+import AppSelect from "@/components/common/AppSelect.vue";
+import AppChip from "@/components/common/AppChip.vue";
+import AppTable from "@/components/common/AppTable.vue";
+import AppDialog from "@/components/common/AppDialog.vue";
+import AppLoadingState from "@/components/common/AppLoadingState.vue";
+import AppErrorState from "@/components/common/AppErrorState.vue";
+import AppEmptyState from "@/components/common/AppEmptyState.vue";
+import AppToast from "@/components/common/AppToast.vue";
 
 const contextStore = useContextStore();
 const authStore = useAuthStore();
 const toast = ref(null);
 
 const tabs = [
-  { key: 'schedules', label: 'Schedules' },
-  { key: 'history', label: 'Run History' },
+  { key: "schedules", label: "Schedules" },
+  { key: "history", label: "Run History" },
 ];
-const activeTab = ref('schedules');
+const activeTab = ref("schedules");
 
 // ---- Schedules ----
 const schedules = ref([]);
 const schedulesLoading = ref(false);
-const schedulesError = ref('');
+const schedulesError = ref("");
 
 const scheduleColumns = [
-  { key: 'name', label: 'Name', sortable: true },
-  { key: 'cron', label: 'Schedule' },
-  { key: 'timezone', label: 'Timezone' },
-  { key: 'format', label: 'Format', width: '90px' },
-  { key: 'scope', label: 'Scope' },
-  { key: 'enabled', label: 'Enabled', width: '80px' },
-  { key: 'missedPolicy', label: 'Missed Policy', width: '110px' },
-  { key: 'actions', label: '', width: '80px' },
+  { key: "name", label: "Name", sortable: true },
+  { key: "cron", label: "Schedule" },
+  { key: "timezone", label: "Timezone" },
+  { key: "format", label: "Format", width: "90px" },
+  { key: "scope", label: "Scope" },
+  { key: "enabled", label: "Enabled", width: "80px" },
+  { key: "missedPolicy", label: "Missed Policy", width: "110px" },
+  { key: "actions", label: "", width: "80px" },
 ];
 
 async function loadSchedules() {
   schedulesLoading.value = true;
-  schedulesError.value = '';
+  schedulesError.value = "";
   try {
     const { data } = await reportsApi.getSchedules();
     schedules.value = Array.isArray(data) ? data : data.items || [];
   } catch (err) {
-    schedulesError.value = err.message || 'Failed to load schedules';
+    schedulesError.value = err.message || "Failed to load schedules";
   } finally {
     schedulesLoading.value = false;
   }
@@ -231,18 +354,39 @@ async function loadSchedules() {
 const showScheduleDialog = ref(false);
 const editingSchedule = ref(null);
 const savingSchedule = ref(false);
-const scheduleForm = ref({ name: '', cronExpression: '', timezone: 'UTC', format: 'CSV', scope: '', enabled: true });
+const scheduleForm = ref({
+  name: "",
+  cronExpression: "",
+  timezone: "UTC",
+  format: "CSV",
+  scope: "",
+  enabled: true,
+});
 const formErrors = ref({});
 
 const timezoneOptions = [
-  'UTC', 'US/Eastern', 'US/Central', 'US/Mountain', 'US/Pacific',
-  'Europe/London', 'Europe/Berlin', 'Asia/Tokyo', 'Asia/Shanghai',
-  'Australia/Sydney',
+  "UTC",
+  "US/Eastern",
+  "US/Central",
+  "US/Mountain",
+  "US/Pacific",
+  "Europe/London",
+  "Europe/Berlin",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Australia/Sydney",
 ];
 
 function openNewSchedule() {
   editingSchedule.value = null;
-  scheduleForm.value = { name: '', cronExpression: '', timezone: 'UTC', format: 'CSV', scope: contextStore.currentNode?.id || '', enabled: true };
+  scheduleForm.value = {
+    name: "",
+    cronExpression: "",
+    timezone: "UTC",
+    format: "CSV",
+    scope: contextStore.currentNode?.id || "",
+    enabled: true,
+  };
   formErrors.value = {};
   showScheduleDialog.value = true;
 }
@@ -250,11 +394,11 @@ function openNewSchedule() {
 function openEditSchedule(sched) {
   editingSchedule.value = sched;
   scheduleForm.value = {
-    name: sched.name || '',
-    cronExpression: sched.cronExpression || sched.cron || '',
-    timezone: sched.timezone || 'UTC',
-    format: sched.format || 'CSV',
-    scope: sched.scope || '',
+    name: sched.name || "",
+    cronExpression: sched.cronExpression || sched.cron || "",
+    timezone: sched.timezone || "UTC",
+    format: sched.format || "CSV",
+    scope: sched.scope || "",
     enabled: sched.enabled !== false,
   };
   formErrors.value = {};
@@ -263,8 +407,9 @@ function openEditSchedule(sched) {
 
 function validateScheduleForm() {
   const e = {};
-  if (!scheduleForm.value.name.trim()) e.name = 'Name is required';
-  if (!scheduleForm.value.cronExpression.trim()) e.cronExpression = 'Cron expression is required';
+  if (!scheduleForm.value.name.trim()) e.name = "Name is required";
+  if (!scheduleForm.value.cronExpression.trim())
+    e.cronExpression = "Cron expression is required";
   formErrors.value = e;
   return Object.keys(e).length === 0;
 }
@@ -274,16 +419,22 @@ async function saveSchedule() {
   savingSchedule.value = true;
   try {
     if (editingSchedule.value) {
-      await reportsApi.updateSchedule(editingSchedule.value.id, scheduleForm.value);
-      toast.value?.addToast({ message: 'Schedule updated', type: 'success' });
+      await reportsApi.updateSchedule(
+        editingSchedule.value.id,
+        scheduleForm.value,
+      );
+      toast.value?.addToast({ message: "Schedule updated", type: "success" });
     } else {
       await reportsApi.createSchedule(scheduleForm.value);
-      toast.value?.addToast({ message: 'Schedule created', type: 'success' });
+      toast.value?.addToast({ message: "Schedule created", type: "success" });
     }
     showScheduleDialog.value = false;
     await loadSchedules();
   } catch (err) {
-    toast.value?.addToast({ message: err.message || 'Save failed', type: 'error' });
+    toast.value?.addToast({
+      message: err.message || "Save failed",
+      type: "error",
+    });
   } finally {
     savingSchedule.value = false;
   }
@@ -302,12 +453,20 @@ function toggleScheduleEnabled(sched) {
 async function confirmToggleEnabled() {
   toggling.value = true;
   try {
-    await reportsApi.updateSchedule(toggleTarget.value.id, { enabled: !toggleTarget.value.enabled });
+    await reportsApi.updateSchedule(toggleTarget.value.id, {
+      enabled: !toggleTarget.value.enabled,
+    });
     toggleTarget.value.enabled = !toggleTarget.value.enabled;
-    toast.value?.addToast({ message: `Schedule ${toggleTarget.value.enabled ? 'enabled' : 'disabled'}`, type: 'success' });
+    toast.value?.addToast({
+      message: `Schedule ${toggleTarget.value.enabled ? "enabled" : "disabled"}`,
+      type: "success",
+    });
     showToggleConfirm.value = false;
   } catch (err) {
-    toast.value?.addToast({ message: err.message || 'Toggle failed', type: 'error' });
+    toast.value?.addToast({
+      message: err.message || "Toggle failed",
+      type: "error",
+    });
   } finally {
     toggling.value = false;
   }
@@ -315,76 +474,86 @@ async function confirmToggleEnabled() {
 
 // Cron to human-readable
 function cronToHuman(cron) {
-  if (!cron) return '';
+  if (!cron) return "";
   const parts = cron.trim().split(/\s+/);
   if (parts.length < 5) return cron;
   const [min, hour, dom, , dow] = parts;
-  if (dom === '1' && dow === '*') return `Monthly on the 1st at ${hour}:${min.padStart(2, '0')}`;
-  if (dow === '1') return `Weekly on Monday at ${hour}:${min.padStart(2, '0')}`;
-  if (dom === '*' && dow === '*') return `Daily at ${hour}:${min.padStart(2, '0')}`;
+  if (dom === "1" && dow === "*")
+    return `Monthly on the 1st at ${hour}:${min.padStart(2, "0")}`;
+  if (dow === "1") return `Weekly on Monday at ${hour}:${min.padStart(2, "0")}`;
+  if (dom === "*" && dow === "*")
+    return `Daily at ${hour}:${min.padStart(2, "0")}`;
   return cron;
 }
 
 // ---- Run History ----
 const runs = ref([]);
 const runsLoading = ref(false);
-const runsError = ref('');
+const runsError = ref("");
 const runPage = ref(1);
 const runTotalPages = ref(1);
 const runTotalItems = ref(0);
-const historyScheduleFilter = ref('');
-const historyStateFilter = ref('');
-const historyDateFrom = ref('');
-const historyDateTo = ref('');
+const historyScheduleFilter = ref("");
+const historyStateFilter = ref("");
+const historyDateFrom = ref("");
+const historyDateTo = ref("");
 
 const scheduleFilterOptions = computed(() => [
-  { value: '', label: 'All schedules' },
-  ...schedules.value.map(s => ({ value: s.id, label: s.name })),
+  { value: "", label: "All schedules" },
+  ...schedules.value.map((s) => ({ value: s.id, label: s.name })),
 ]);
 
 const stateFilterOptions = [
-  { value: '', label: 'All states' },
-  { value: 'ready', label: 'Ready' },
-  { value: 'failed', label: 'Failed' },
+  { value: "", label: "All states" },
+  { value: "ready", label: "Ready" },
+  { value: "failed", label: "Failed" },
 ];
 
 const runColumns = [
-  { key: 'id', label: 'ID', width: '80px' },
-  { key: 'scheduleName', label: 'Schedule' },
-  { key: 'state', label: 'State', width: '100px' },
-  { key: 'started_at', label: 'Started' },
-  { key: 'finished_at', label: 'Finished' },
-  { key: 'duration', label: 'Duration', width: '100px' },
-  { key: 'requested_by', label: 'Requested By' },
-  { key: 'actions', label: '', width: '160px' },
+  { key: "id", label: "ID", width: "80px" },
+  { key: "scheduleName", label: "Schedule" },
+  { key: "state", label: "State", width: "100px" },
+  { key: "started_at", label: "Started" },
+  { key: "finished_at", label: "Finished" },
+  { key: "duration", label: "Duration", width: "100px" },
+  { key: "requested_by", label: "Requested By" },
+  { key: "actions", label: "", width: "160px" },
 ];
 
 async function loadRuns() {
   runsLoading.value = true;
-  runsError.value = '';
+  runsError.value = "";
   try {
     const params = { page: runPage.value };
     if (historyStateFilter.value) params.state = historyStateFilter.value;
     if (historyDateFrom.value) params.date_from = historyDateFrom.value;
     if (historyDateTo.value) params.date_to = historyDateTo.value;
 
-    const schedId = historyScheduleFilter.value || (schedules.value[0]?.id);
-    if (!schedId) { runs.value = []; runsLoading.value = false; return; }
+    const schedId = historyScheduleFilter.value || schedules.value[0]?.id;
+    if (!schedId) {
+      runs.value = [];
+      runsLoading.value = false;
+      return;
+    }
     params.schedule_id = schedId;
     const { data } = await reportsApi.getRuns(params);
     const list = Array.isArray(data) ? data : data.items || [];
-    runs.value = list.map(r => ({ ...r, _showError: false, _downloading: false }));
+    runs.value = list.map((r) => ({
+      ...r,
+      _showError: false,
+      _downloading: false,
+    }));
     runTotalPages.value = data.totalPages || 1;
     runTotalItems.value = data.totalItems || list.length;
   } catch (err) {
-    runsError.value = err.message || 'Failed to load runs';
+    runsError.value = err.message || "Failed to load runs";
   } finally {
     runsLoading.value = false;
   }
 }
 
 function computeDuration(row) {
-  if (!row.started_at || !row.finished_at) return '--';
+  if (!row.started_at || !row.finished_at) return "--";
   const diff = new Date(row.finished_at) - new Date(row.started_at);
   if (diff < 1000) return `${diff}ms`;
   if (diff < 60000) return `${(diff / 1000).toFixed(1)}s`;
@@ -396,21 +565,28 @@ async function downloadReport(row) {
   try {
     // Access check first
     const { data: accessData } = await reportsApi.checkAccess(row.id);
-    const denied = accessData?.has_access === false || accessData?.allowed === false;
+    const denied =
+      accessData?.has_access === false || accessData?.allowed === false;
     if (denied) {
-      toast.value?.addToast({ message: 'You no longer have permission to download this report.', type: 'error' });
+      toast.value?.addToast({
+        message: "You no longer have permission to download this report.",
+        type: "error",
+      });
       return;
     }
     const { data } = await reportsApi.downloadRun(row.id);
     const url = URL.createObjectURL(data);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `report-${row.id}.${row.format?.toLowerCase() || 'csv'}`;
+    a.download = `report-${row.id}.${row.format?.toLowerCase() || "csv"}`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.value?.addToast({ message: 'Download started', type: 'success' });
+    toast.value?.addToast({ message: "Download started", type: "success" });
   } catch (err) {
-    toast.value?.addToast({ message: err.message || 'Download failed', type: 'error' });
+    toast.value?.addToast({
+      message: err.message || "Download failed",
+      type: "error",
+    });
   } finally {
     row._downloading = false;
   }
@@ -418,11 +594,13 @@ async function downloadReport(row) {
 
 // ---- Tab switching ----
 watch(activeTab, (tab) => {
-  if (tab === 'schedules' && schedules.value.length === 0) loadSchedules();
-  if (tab === 'history') loadRuns();
+  if (tab === "schedules" && schedules.value.length === 0) loadSchedules();
+  if (tab === "history") loadRuns();
 });
 
-onMounted(() => { loadSchedules(); });
+onMounted(() => {
+  loadSchedules();
+});
 </script>
 
 <style lang="scss" scoped>
@@ -441,11 +619,18 @@ onMounted(() => { loadSchedules(); });
   border-bottom: 2px solid transparent;
   transition: all $transition-fast;
   margin-bottom: -1px;
-  &:hover { color: $color-neutral-700; }
-  &--active { color: $color-primary-600; border-bottom-color: $color-primary-500; }
+  &:hover {
+    color: $color-neutral-700;
+  }
+  &--active {
+    color: $color-primary-600;
+    border-bottom-color: $color-primary-500;
+  }
 }
 
-.tab-panel { min-height: 300px; }
+.tab-panel {
+  min-height: 300px;
+}
 
 // Cron cell
 .cron-cell {
@@ -469,7 +654,12 @@ onMounted(() => { loadSchedules(); });
   align-items: center;
   cursor: pointer;
 
-  input { position: absolute; opacity: 0; width: 0; height: 0; }
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
 
   &__track {
     display: block;
@@ -481,7 +671,7 @@ onMounted(() => { loadSchedules(); });
     transition: background $transition-fast;
 
     &::after {
-      content: '';
+      content: "";
       position: absolute;
       top: 2px;
       left: 2px;
@@ -496,7 +686,9 @@ onMounted(() => { loadSchedules(); });
 
   input:checked + &__track {
     background: $color-primary-500;
-    &::after { transform: translateX(16px); }
+    &::after {
+      transform: translateX(16px);
+    }
   }
 }
 
@@ -521,7 +713,9 @@ onMounted(() => { loadSchedules(); });
   color: $color-danger-500;
   font-weight: $font-weight-medium;
   cursor: pointer;
-  &:hover { text-decoration: underline; }
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .run-error {
@@ -576,7 +770,10 @@ onMounted(() => { loadSchedules(); });
   color: $color-primary-600;
   cursor: pointer;
   transition: all $transition-fast;
-  &:hover { background: $color-primary-50; border-color: $color-primary-300; }
+  &:hover {
+    background: $color-primary-50;
+    border-color: $color-primary-300;
+  }
 }
 
 .radio-group {
@@ -591,7 +788,9 @@ onMounted(() => { loadSchedules(); });
   font-size: $font-size-base;
   color: $color-neutral-700;
   cursor: pointer;
-  input { accent-color: $color-primary-500; }
+  input {
+    accent-color: $color-primary-500;
+  }
 }
 
 .form-toggle {
@@ -602,7 +801,11 @@ onMounted(() => { loadSchedules(); });
     font-size: $font-size-base;
     color: $color-neutral-700;
     cursor: pointer;
-    input { accent-color: $color-primary-500; width: 18px; height: 18px; }
+    input {
+      accent-color: $color-primary-500;
+      width: 18px;
+      height: 18px;
+    }
   }
 }
 </style>

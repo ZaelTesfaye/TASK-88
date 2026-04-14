@@ -3,12 +3,20 @@
     <router-view />
   </div>
   <div v-else class="app-layout">
-    <aside class="sidebar" :class="{ collapsed: sidebarCollapsed, 'mobile-open': mobileMenuOpen }">
+    <aside
+      class="sidebar"
+      :class="{ collapsed: sidebarCollapsed, 'mobile-open': mobileMenuOpen }"
+    >
       <div class="sidebar-header">
         <div class="logo">
           <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
             <rect width="32" height="32" rx="8" fill="#1a73e8" />
-            <path d="M8 12L16 8L24 12V20L16 24L8 20V12Z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" />
+            <path
+              d="M8 12L16 8L24 12V20L16 24L8 20V12Z"
+              stroke="#fff"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
             <path d="M16 16V24" stroke="#fff" stroke-width="1.5" />
             <path d="M8 12L16 16L24 12" stroke="#fff" stroke-width="1.5" />
           </svg>
@@ -25,50 +33,106 @@
           @click="mobileMenuOpen = false"
         >
           <span class="nav-icon" v-html="item.icon"></span>
-          <span v-if="!sidebarCollapsed" class="nav-label">{{ item.label }}</span>
+          <span v-if="!sidebarCollapsed" class="nav-label">{{
+            item.label
+          }}</span>
         </router-link>
       </nav>
-      <button class="collapse-toggle" @click="sidebarCollapsed = !sidebarCollapsed">
+      <button
+        class="collapse-toggle"
+        @click="sidebarCollapsed = !sidebarCollapsed"
+      >
         <svg
-          width="18" height="18" viewBox="0 0 18 18" fill="none"
+          width="18"
+          height="18"
+          viewBox="0 0 18 18"
+          fill="none"
           :class="{ rotated: sidebarCollapsed }"
         >
-          <path d="M11 4L6 9L11 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          <path
+            d="M11 4L6 9L11 14"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
       </button>
     </aside>
 
-    <div v-if="mobileMenuOpen" class="mobile-overlay" @click="mobileMenuOpen = false"></div>
+    <div
+      v-if="mobileMenuOpen"
+      class="mobile-overlay"
+      @click="mobileMenuOpen = false"
+    ></div>
 
     <div class="main-area">
       <header class="topbar">
         <button class="hamburger" @click="mobileMenuOpen = !mobileMenuOpen">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M3 5H17M3 10H17M3 15H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <path
+              d="M3 5H17M3 10H17M3 15H17"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
           </svg>
         </button>
-        <AppBreadcrumb :items="contextStore.contextBreadcrumb" @navigate="onBreadcrumbNav" />
+        <AppBreadcrumb
+          :items="contextStore.contextBreadcrumb"
+          @navigate="onBreadcrumbNav"
+        />
         <div class="topbar-spacer"></div>
         <div class="user-menu" :class="{ open: userMenuOpen }">
-          <button class="user-menu-trigger" @click="userMenuOpen = !userMenuOpen">
+          <button
+            class="user-menu-trigger"
+            @click="userMenuOpen = !userMenuOpen"
+          >
             <div class="user-avatar">
               {{ userInitials }}
             </div>
             <span class="username">{{ authStore.user?.username }}</span>
-            <AppChip :status="roleChipStatus" :label="roleDisplayLabel" size="sm" />
-            <svg class="user-menu-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M4 5.5L7 8.5L10 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <AppChip
+              :status="roleChipStatus"
+              :label="roleDisplayLabel"
+              size="sm"
+            />
+            <svg
+              class="user-menu-chevron"
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+            >
+              <path
+                d="M4 5.5L7 8.5L10 5.5"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </button>
           <div v-if="userMenuOpen" class="user-dropdown">
             <div class="user-dropdown-header">
-              <span class="user-dropdown-name">{{ authStore.user?.username }}</span>
+              <span class="user-dropdown-name">{{
+                authStore.user?.username
+              }}</span>
               <span class="user-dropdown-role">{{ roleDisplayLabel }}</span>
             </div>
             <div class="user-dropdown-divider"></div>
-            <button class="user-dropdown-item user-dropdown-item--danger" @click="handleLogout">
+            <button
+              class="user-dropdown-item user-dropdown-item--danger"
+              @click="handleLogout"
+            >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M6 14H3.333A1.333 1.333 0 012 12.667V3.333A1.333 1.333 0 013.333 2H6M10.667 11.333L14 8M14 8L10.667 4.667M14 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path
+                  d="M6 14H3.333A1.333 1.333 0 012 12.667V3.333A1.333 1.333 0 013.333 2H6M10.667 11.333L14 8M14 8L10.667 4.667M14 8H6"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
               Logout
             </button>
@@ -87,12 +151,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth.js';
-import { useContextStore } from '@/stores/context.js';
-import AppBreadcrumb from '@/components/common/AppBreadcrumb.vue';
-import AppChip from '@/components/common/AppChip.vue';
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth.js";
+import { useContextStore } from "@/stores/context.js";
+import AppBreadcrumb from "@/components/common/AppBreadcrumb.vue";
+import AppChip from "@/components/common/AppChip.vue";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -103,63 +167,74 @@ const mobileMenuOpen = ref(false);
 const userMenuOpen = ref(false);
 
 const ROLE_LABELS = {
-  system_admin: 'System Admin',
-  data_steward: 'Data Steward',
-  operations_analyst: 'Ops Analyst',
-  standard_user: 'Standard',
-  viewer: 'Viewer',
+  system_admin: "System Admin",
+  data_steward: "Data Steward",
+  operations_analyst: "Ops Analyst",
+  standard_user: "Standard",
+  viewer: "Viewer",
 };
 
 const ROLE_CHIP_STATUS = {
-  system_admin: 'active',
-  data_steward: 'review',
-  operations_analyst: 'running',
-  standard_user: 'inactive',
-  viewer: 'inactive',
+  system_admin: "active",
+  data_steward: "review",
+  operations_analyst: "running",
+  standard_user: "inactive",
+  viewer: "inactive",
 };
 
 const navItems = [
   {
-    path: '/org',
-    label: 'Org Tree',
+    path: "/org",
+    label: "Org Tree",
     icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2V6M10 6H6M10 6H14M6 6V10M14 6V10M6 10H3V14H7V10H6ZM14 10H11V14H15V10H14Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    roles: ['system_admin'],
+    roles: ["system_admin"],
   },
   {
-    path: '/master/sku',
-    label: 'Master Data',
+    path: "/master/sku",
+    label: "Master Data",
     icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M3 8H17M8 8V17" stroke="currentColor" stroke-width="1.5"/></svg>',
-    roles: ['system_admin', 'data_steward', 'operations_analyst', 'standard_user'],
+    roles: [
+      "system_admin",
+      "data_steward",
+      "operations_analyst",
+      "standard_user",
+    ],
   },
   {
-    path: '/playback',
-    label: 'Playback',
+    path: "/playback",
+    label: "Playback",
     icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="6,3 18,10 6,17" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>',
-    roles: ['system_admin', 'data_steward', 'operations_analyst', 'standard_user', 'viewer'],
+    roles: [
+      "system_admin",
+      "data_steward",
+      "operations_analyst",
+      "standard_user",
+      "viewer",
+    ],
   },
   {
-    path: '/analytics',
-    label: 'Analytics',
+    path: "/analytics",
+    label: "Analytics",
     icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 17V11M8 17V7M13 17V10M18 17V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
-    roles: ['system_admin', 'operations_analyst'],
+    roles: ["system_admin", "operations_analyst"],
   },
   {
-    path: '/ingestion',
-    label: 'Ingestion',
+    path: "/ingestion",
+    label: "Ingestion",
     icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2V12M6 8L10 12L14 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 14V16C3 17.1 3.9 18 5 18H15C16.1 18 17 17.1 17 16V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
-    roles: ['system_admin', 'operations_analyst'],
+    roles: ["system_admin", "operations_analyst"],
   },
   {
-    path: '/reports',
-    label: 'Reports',
+    path: "/reports",
+    label: "Reports",
     icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 2H5C3.9 2 3 2.9 3 4V16C3 17.1 3.9 18 5 18H15C16.1 18 17 17.1 17 16V7L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 2V7H17" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 10H13M7 13H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
-    roles: ['system_admin', 'operations_analyst'],
+    roles: ["system_admin", "operations_analyst"],
   },
   {
-    path: '/security',
-    label: 'Security Admin',
+    path: "/security",
+    label: "Security Admin",
     icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L3 5V9.09C3 13.14 5.87 16.92 10 18C14.13 16.92 17 13.14 17 9.09V5L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 10L9 12L13 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    roles: ['system_admin'],
+    roles: ["system_admin"],
   },
 ];
 
@@ -170,16 +245,16 @@ const visibleNavItems = computed(() => {
 });
 
 const userInitials = computed(() => {
-  const name = authStore.user?.username || '';
+  const name = authStore.user?.username || "";
   return name.slice(0, 2).toUpperCase();
 });
 
 const roleDisplayLabel = computed(() => {
-  return ROLE_LABELS[authStore.userRole] || authStore.userRole || '';
+  return ROLE_LABELS[authStore.userRole] || authStore.userRole || "";
 });
 
 const roleChipStatus = computed(() => {
-  return ROLE_CHIP_STATUS[authStore.userRole] || 'inactive';
+  return ROLE_CHIP_STATUS[authStore.userRole] || "inactive";
 });
 
 function onBreadcrumbNav(item) {
@@ -192,18 +267,18 @@ async function handleLogout() {
 }
 
 function onClickOutsideUserMenu(e) {
-  const menu = document.querySelector('.user-menu');
+  const menu = document.querySelector(".user-menu");
   if (menu && !menu.contains(e.target)) {
     userMenuOpen.value = false;
   }
 }
 
 onMounted(() => {
-  document.addEventListener('click', onClickOutsideUserMenu);
+  document.addEventListener("click", onClickOutsideUserMenu);
 });
 
 onUnmounted(() => {
-  document.removeEventListener('click', onClickOutsideUserMenu);
+  document.removeEventListener("click", onClickOutsideUserMenu);
 });
 </script>
 
