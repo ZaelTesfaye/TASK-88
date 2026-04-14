@@ -44,11 +44,11 @@ if [ ! -d "node_modules" ]; then
     echo "Installing frontend dependencies..."
     npm install --silent 2>&1
 fi
-if npx vue-tsc --noEmit 2>/dev/null; then
-    echo "[PASS] Frontend type check passed"
+if npm run build 2>&1; then
+    echo "[PASS] Frontend build check passed"
     PASSED=$((PASSED + 1))
 else
-    echo "[FAIL] Frontend type check failed"
+    echo "[FAIL] Frontend build check failed"
     FAILED=$((FAILED + 1))
 fi
 TOTAL=$((TOTAL + 1))

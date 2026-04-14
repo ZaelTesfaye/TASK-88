@@ -135,7 +135,7 @@ const navItems = [
     path: '/playback',
     label: 'Playback',
     icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="6,3 18,10 6,17" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>',
-    roles: ['system_admin', 'data_steward', 'operations_analyst', 'standard_user'],
+    roles: ['system_admin', 'data_steward', 'operations_analyst', 'standard_user', 'viewer'],
   },
   {
     path: '/analytics',

@@ -95,10 +95,10 @@ func (f *ConnectorFactory) CreateFromSource(source models.ImportSource, connConf
 
 // FolderConnector reads data from local filesystem directories.
 type FolderConnector struct {
-	path          string
-	filePattern   string
-	records       []map[string]interface{}
-	loaded        bool
+	path           string
+	filePattern    string
+	records        []map[string]interface{}
+	loaded         bool
 	lastCheckpoint string
 }
 
@@ -678,7 +678,8 @@ func (c *DatabaseConnector) AcknowledgeCheckpoint(cursor string) error {
 func buildDSN(driver, user, password, host string, port int, dbName string) string {
 	switch driver {
 	case "mysql":
-		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		// Keep connection attempts bounded so unreachable hosts fail fast in tests and runtime.
+		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local&timeout=5s&readTimeout=30s&writeTimeout=30s",
 			user, password, host, port, dbName)
 	default:
 		// Fallback generic DSN.

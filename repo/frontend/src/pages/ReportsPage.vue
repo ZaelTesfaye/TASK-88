@@ -396,7 +396,8 @@ async function downloadReport(row) {
   try {
     // Access check first
     const { data: accessData } = await reportsApi.checkAccess(row.id);
-    if (accessData.has_access === false) {
+    const denied = accessData?.has_access === false || accessData?.allowed === false;
+    if (denied) {
       toast.value?.addToast({ message: 'You no longer have permission to download this report.', type: 'error' });
       return;
     }
