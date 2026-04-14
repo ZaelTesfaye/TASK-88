@@ -1,252 +1,387 @@
-# 1. Verdict
+# Delivery Acceptance and Project Architecture Audit (Static-Only)
 
-- **Overall conclusion: Partial Pass**
+## 1. Verdict
 
-# 2. Scope and Static Verification Boundary
+- Overall conclusion: Partial Pass
 
-- **Reviewed**: repository docs, backend Go source (router, handlers, services, middleware, models), DB migration SQL, frontend Vue routes/pages/stores/APIs, backend and frontend test files/config.
-- **Excluded from evidence**: `./.tmp/` and all subpaths.
-- **Intentionally not executed**: project startup, Docker, database runtime, API calls, frontend runtime rendering, automated test runs.
-- **Manual verification required**:
-- Real runtime behavior for scheduling precision (e.g., 06:00 execution), playback seek latency “within 200ms”, and LAN/TLS deployment behavior.
-- Actual data correctness after `AutoMigrate` applies drifted models over `init.sql`.
+## 2. Scope and Static Verification Boundary
 
-# 3. Repository / Requirement Mapping Summary
+- Reviewed scope:
+  - Backend: routing, auth, RBAC, scope enforcement, master data, playback, analytics, reports, ingestion, security, integration, logging, migrations, and test suites.
+  - Frontend: router, core pages, API adapters, state wiring, and test suites.
+  - Documentation and scripts: README.md, run_tests.sh, frontend/package.json.
+- Explicitly excluded from evidence:
+  - Any content under ./.tmp/.
+- Not executed:
+  - Project runtime, tests, Docker, database, browser flows, schedulers, network calls.
+- Cannot confirm statically:
+  - Runtime behavior and performance targets (for example 200 ms seek confirmation), LAN deployment correctness, real scheduler execution at wall-clock time, and visual rendering quality in actual browsers.
+- Manual verification required for:
+  - End-to-end playback timing UX and latency, real file export/download behavior, real connector runs, and real dual-approval workflow on a live DB.
 
-- **Prompt core goal**: LAN-only multi-org data + media hub with org hierarchy/context, versioned master data governance, ingestion connectors (folder/share/on-prem DB), LRC lyric playback/search/jump, KPI analytics/report scheduling/export, RBAC/scope enforcement, auditability, security controls.
-- **Main mapped implementation areas**:
-- Backend route groups and RBAC (`backend/internal/router/router.go`)
-- Auth/session/security/audit services and handlers
-- Master/version/org/ingestion/playback/analytics/reports/integration modules
-- Frontend route/page/store wiring for required flows
-- Tests and test harness realism.
+## 3. Repository / Requirement Mapping Summary
 
-# 4. Section-by-section Review
+- Prompt core goal mapped: multi-org local-network data/media hub with strict auth/RBAC/scope, master data lifecycle, playback with LRC/word timing/search/jump, analytics/reports, ingestion reliability, and security controls.
+- Main implementation areas mapped:
+  - Backend route surface and middleware: backend/internal/router/router.go, backend/internal/auth, backend/internal/rbac.
+  - Business services: backend/internal/masterdata, backend/internal/playback, backend/internal/analytics, backend/internal/reports, backend/internal/ingestion, backend/internal/security, backend/internal/integration.
+  - Frontend core flows: frontend/src/pages/_.vue, frontend/src/api/_.js, frontend/src/router/index.js.
+  - Static tests and docs: backend/tests/**, frontend/src/tests/**, README.md, run_tests.sh.
 
-## 4.1 Hard Gates
+## 4. Section-by-section Review
 
-### 4.1.1 Documentation and static verifiability
-- **Conclusion: Partial Pass**
-- **Rationale**: Startup/config/test guidance exists, but DB schema source (`init.sql`) is materially inconsistent with active model/service code, reducing static verifiability confidence.
-- **Evidence**: `repo/README.md:28`, `repo/README.md:124`, `repo/README.md:150`, `repo/backend/migrations/init.sql:40`, `repo/backend/internal/models/session.go:11`, `repo/backend/migrations/init.sql:127`, `repo/backend/internal/models/master.go:23`, `repo/backend/migrations/init.sql:432`, `repo/backend/internal/models/security.go:35`
+### 4.1 Hard Gates
 
-### 4.1.2 Material deviation from Prompt
-- **Conclusion: Partial Pass**
-- **Rationale**: Core platform shape exists, but prompt-critical ingestion from on-prem DB is only structural stub and not real data pull.
-- **Evidence**: `repo/backend/internal/ingestion/connector.go:408`, `repo/backend/internal/ingestion/connector.go:511`, `repo/docs/mock-and-stub-disclosure.md:21`, `repo/docs/mock-and-stub-disclosure.md:43`
+#### 4.1.1 Documentation and static verifiability
 
-## 4.2 Delivery Completeness
+- Conclusion: Partial Pass
+- Rationale:
+  - Startup/test instructions are present and broadly consistent.
+  - However, test script quality signals are weakened by a compile step that always passes regardless of vue-tsc exit status.
+- Evidence:
+  - README.md:32, README.md:128, README.md:134, README.md:137
+  - run_tests.sh:39, run_tests.sh:40
+- Manual verification note:
+  - Real reproducibility requires actually running commands, which was intentionally not done.
 
-### 4.2.1 Core requirement coverage
-- **Conclusion: Partial Pass**
-- **Rationale**: Many core flows exist (org, master/version, playback, analytics/reports, audit/security), but key scope-isolation behavior is incomplete in analytics/report/master object access.
-- **Evidence**: `repo/backend/internal/router/router.go:95`, `repo/backend/internal/router/router.go:176`, `repo/backend/internal/router/router.go:191`, `repo/backend/internal/handlers/master_handler.go:153`, `repo/backend/internal/analytics/analytics_service.go:215`, `repo/backend/internal/reports/report_service.go:464`
+#### 4.1.2 Material deviation from Prompt
 
-### 4.2.2 End-to-end 0->1 deliverable (vs fragment/demo)
-- **Conclusion: Partial Pass**
-- **Rationale**: Repo is full-structure full-stack, but connector DB path and some security/runtime claims remain partially implemented.
-- **Evidence**: `repo/README.md:161`, `repo/backend/cmd/server/main.go:69`, `repo/frontend/src/router/index.js:4`, `repo/backend/internal/ingestion/connector.go:511`
+- Conclusion: Partial Pass
+- Rationale:
+  - Core modules exist and align structurally.
+  - Material deviations exist in security boundary enforcement and frontend/backend API contracts affecting core report/playback behavior.
+- Evidence:
+  - backend/internal/router/router.go:163, backend/internal/router/router.go:165, backend/internal/router/router.go:166
+  - frontend/src/pages/PlaybackPage.vue:367, frontend/src/pages/PlaybackPage.vue:368
+  - backend/internal/handlers/playback_handler.go:269
 
-## 4.3 Engineering and Architecture Quality
+### 4.2 Delivery Completeness
 
-### 4.3.1 Structure and module decomposition
-- **Conclusion: Pass**
-- **Rationale**: Backend and frontend are modularized by domain; route registration and service layers are separated.
-- **Evidence**: `repo/backend/internal/router/router.go:56`, `repo/backend/internal/handlers/master_handler.go:21`, `repo/backend/internal/masterdata/master_service.go:114`, `repo/frontend/src/router/index.js:4`, `repo/frontend/src/pages/`
+#### 4.2.1 Core requirements coverage
 
-### 4.3.2 Maintainability and extensibility
-- **Conclusion: Partial Pass**
-- **Rationale**: Overall modular, but schema drift and scope enforcement inconsistencies create extension risk and operational ambiguity.
-- **Evidence**: `repo/backend/migrations/init.sql:127`, `repo/backend/internal/models/master.go:21`, `repo/backend/internal/analytics/analytics_service.go:215`, `repo/backend/internal/reports/report_service.go:464`
+- Conclusion: Partial Pass
+- Rationale:
+  - Most required modules/pages/features exist.
+  - Core gaps remain in report access control consistency and playback parse contract alignment.
+- Evidence:
+  - frontend/src/router/index.js:45
+  - backend/internal/router/router.go:192
+  - frontend/src/pages/ReportsPage.vue:373, frontend/src/api/reports.js:27
+  - frontend/src/pages/PlaybackPage.vue:367-369 (see lines 367, 368, 369)
+  - backend/internal/handlers/playback_handler.go:269
+- Manual verification note:
+  - Full flow closure (upload LRC to playback UI + report download checks) requires runtime testing.
 
-## 4.4 Engineering Details and Professionalism
+#### 4.2.2 End-to-end deliverable shape (0 to 1)
 
-### 4.4.1 Error handling, logging, validation, API design
-- **Conclusion: Partial Pass**
-- **Rationale**: Structured errors/logging/validation are present, but notable gaps remain: TLS flag not wired to HTTPS server, key material handling weak, and scope checks incomplete on data reads.
-- **Evidence**: `repo/backend/internal/errors/errors.go:57`, `repo/backend/internal/logging/logger.go:119`, `repo/backend/internal/config/config.go:62`, `repo/backend/cmd/server/main.go:84`, `repo/backend/internal/security/security_service.go:339`, `repo/backend/internal/handlers/master_handler.go:153`
+- Conclusion: Pass
+- Rationale:
+  - Coherent full-stack project structure with backend, frontend, docs, scripts, and migrations.
+- Evidence:
+  - README.md:151-207
+  - frontend/package.json:6-12
+  - backend/cmd/server/main.go:1
 
-### 4.4.2 Product-level credibility
-- **Conclusion: Partial Pass**
-- **Rationale**: Broad product surface exists, but some prompt-critical behaviors are simulated/stubbed and tests are heavily mock-based.
-- **Evidence**: `repo/backend/internal/ingestion/connector.go:511`, `repo/backend/tests/api/helpers_test.go:30`, `repo/backend/tests/api/master_api_test.go:113`, `repo/frontend/src/tests/e2e/app-layout.test.js:2`
+### 4.3 Engineering and Architecture Quality
 
-## 4.5 Prompt Understanding and Requirement Fit
+#### 4.3.1 Structure and module decomposition
 
-### 4.5.1 Business understanding and semantic fit
-- **Conclusion: Partial Pass**
-- **Rationale**: Business areas are covered, but strict scope isolation and real on-prem DB ingestion are not fully realized; this undercuts key multi-org governance expectations.
-- **Evidence**: `repo/backend/internal/ingestion/connector.go:511`, `repo/backend/internal/analytics/analytics_service.go:215`, `repo/backend/internal/reports/report_service.go:464`, `repo/backend/internal/handlers/master_handler.go:153`
+- Conclusion: Pass
+- Rationale:
+  - Clear package decomposition by domain and layers; route grouping and service separation are present.
+- Evidence:
+  - backend/internal/router/router.go:1-311
+  - backend/internal/handlers/_.go and backend/internal/_\_service.go layout
 
-## 4.6 Aesthetics (frontend/full-stack)
+#### 4.3.2 Maintainability and extensibility
 
-### 4.6.1 Visual/interaction quality
-- **Conclusion: Cannot Confirm Statistically**
-- **Rationale**: Static code shows structured layouts, component reuse, responsive states, and interaction classes, but visual fidelity and runtime interaction quality require manual UI execution.
-- **Evidence**: `repo/frontend/src/App.vue:218`, `repo/frontend/src/pages/PlaybackPage.vue:75`, `repo/frontend/src/styles/variables.scss`
+- Conclusion: Partial Pass
+- Rationale:
+  - Extensible baseline exists.
+  - Several cross-layer contract drifts and scope-enforcement inconsistencies increase maintenance risk.
+- Evidence:
+  - frontend/src/pages/ReportsPage.vue:373, frontend/src/api/reports.js:27
+  - frontend/src/pages/ReportsPage.vue:397-398, backend/internal/handlers/report_handler.go:319, backend/internal/handlers/report_handler.go:323
 
-# 5. Issues / Suggestions (Severity-Rated)
+### 4.4 Engineering Details and Professionalism
 
-## Blocker/High
+#### 4.4.1 Error handling, logging, validation, API design
 
-### F-01
-- **Severity**: High
-- **Title**: On-prem database ingestion connector is non-functional stub
-- **Conclusion**: Fail
-- **Evidence**: `repo/backend/internal/ingestion/connector.go:408`, `repo/backend/internal/ingestion/connector.go:495`, `repo/backend/internal/ingestion/connector.go:511`, `repo/docs/mock-and-stub-disclosure.md:21`, `repo/docs/mock-and-stub-disclosure.md:43`
-- **Impact**: Prompt explicitly requires connector ingestion from on-prem databases with scheduled/incremental/backfill behavior; DB source currently cannot ingest records.
-- **Minimum actionable fix**: Implement real DB connectivity and cursor-based query pull in `DatabaseConnector.Pull`, with connection/auth validation and checkpoint-aware incremental extraction.
+- Conclusion: Partial Pass
+- Rationale:
+  - Good baseline error handling/logging/redaction and validation in many areas.
+  - API contract mismatches and authorization omissions are material professionalism defects.
+- Evidence:
+  - backend/internal/logging/logger.go:13, backend/internal/logging/logger.go:118-160
+  - backend/internal/ingestion/validation.go:37-66
+  - frontend/src/pages/ReportsPage.vue:368-369, backend/internal/handlers/report_handler.go:215-216
 
-### F-02
-- **Severity**: High
-- **Title**: Scope isolation is not enforced in key data paths
-- **Conclusion**: Fail
-- **Evidence**: `repo/backend/internal/handlers/master_handler.go:153`, `repo/backend/internal/handlers/master_handler.go:180`, `repo/backend/internal/analytics/analytics_service.go:215`, `repo/backend/internal/analytics/analytics_service.go:222`, `repo/backend/internal/reports/report_service.go:464`, `repo/backend/internal/reports/report_service.go:475`
-- **Impact**: Multi-org/city/department data isolation can be bypassed on record details/updates and KPI/report data, risking unauthorized cross-scope visibility.
-- **Minimum actionable fix**: Apply object/query-level scope filters consistently for master detail/update/deactivate, analytics KPI/trends queries, and report generation datasets.
+#### 4.4.2 Product-like readiness versus demo shape
 
-### F-03
-- **Severity**: High
-- **Title**: Critical API tests are synthetic and do not verify real handler+DB security behavior
-- **Conclusion**: Fail
-- **Evidence**: `repo/backend/tests/api/helpers_test.go:30`, `repo/backend/tests/api/helpers_test.go:80`, `repo/backend/tests/api/master_api_test.go:113`, `repo/backend/tests/api/security_regression_test.go:106`
-- **Impact**: Tests can pass while production handlers still leak scope/data or break DB-backed flows; high-risk regressions remain undetected.
-- **Minimum actionable fix**: Add integration tests against actual router registration (`router.SetupRouter`) with real test DB and real handlers, including object-scope authorization and analytics/report scope assertions.
+- Conclusion: Partial Pass
+- Rationale:
+  - Repository resembles a product codebase.
+  - Some tests are simulation-heavy and do not convincingly cover key security and scope scenarios end-to-end.
+- Evidence:
+  - backend/tests/api/security_regression_test.go:15, backend/tests/api/security_regression_test.go:34
+  - backend/tests/api/scope_enforcement_test.go:149, backend/tests/api/scope_enforcement_test.go:157
 
-### F-04
-- **Severity**: High
-- **Title**: Migration schema and model/service schema diverge materially
-- **Conclusion**: Fail
-- **Evidence**: `repo/README.md:150`, `repo/backend/migrations/init.sql:43`, `repo/backend/internal/models/session.go:11`, `repo/backend/migrations/init.sql:129`, `repo/backend/internal/models/master.go:23`, `repo/backend/migrations/init.sql:432`, `repo/backend/internal/models/security.go:35`
-- **Impact**: Static verifiability and deployment predictability degrade; schema assumptions differ between SQL bootstrap and runtime model queries.
-- **Minimum actionable fix**: Align `init.sql` with current model contracts (or adopt versioned migrations and remove conflicting legacy definitions), then verify route queries against canonical schema.
+### 4.5 Prompt Understanding and Requirement Fit
 
-## Medium/Low
+#### 4.5.1 Business objective and constraints fit
 
-### F-05
-- **Severity**: Medium
-- **Title**: Frontend role matrix conflicts with backend permissions for standard user master-data viewing
-- **Conclusion**: Partial Fail
-- **Evidence**: `repo/frontend/src/router/index.js:21`, `repo/frontend/src/App.vue:132`, `repo/backend/internal/rbac/rbac.go:60`
-- **Impact**: Standard users are shown master-data nav but route guard blocks access, causing inconsistent UX and requirement fit risk.
-- **Minimum actionable fix**: Align route meta roles with intended backend permission model, or remove nav visibility for blocked roles.
+- Conclusion: Partial Pass
+- Rationale:
+  - Most domain requirements are represented.
+  - Critical requirement-fit risks remain:
+    - Standard users can mutate media via backend media routes.
+    - Report object-level read scope can be bypassed on list/get endpoints.
+    - Playback lyric parse payload contract mismatch can break LRC-driven UX.
+- Evidence:
+  - backend/internal/router/router.go:163, 165, 166
+  - backend/internal/handlers/report_handler.go:224, 240, 275
+  - frontend/src/pages/PlaybackPage.vue:367-369
+  - backend/internal/handlers/playback_handler.go:269
 
-### F-06
-- **Severity**: Medium
-- **Title**: TLS configuration flag is documented but not wired in server startup
-- **Conclusion**: Partial Fail
-- **Evidence**: `repo/README.md:81`, `repo/backend/internal/config/config.go:62`, `repo/backend/cmd/server/main.go:84`
-- **Impact**: “Enable HTTPS” claim is not statically supported in runtime server path.
-- **Minimum actionable fix**: Implement conditional `ListenAndServeTLS` path (cert/key configuration) when `ENABLE_TLS=true`.
+### 4.6 Aesthetics (frontend-only dimension in full-stack)
 
-### F-07
-- **Severity**: Medium
-- **Title**: Key rotation stores raw generated key bytes (hex) as wrapped material
-- **Conclusion**: Partial Fail
-- **Evidence**: `repo/backend/internal/security/security_service.go:332`, `repo/backend/internal/security/security_service.go:342`, `repo/backend/internal/models/security.go:26`
-- **Impact**: Weakens at-rest key protection expectations.
-- **Minimum actionable fix**: Use true key wrapping/envelope encryption (master key/HSM equivalent) before persisting `WrappedKey`.
+#### 4.6.1 Visual/interaction quality
 
-### F-08
-- **Severity**: Low
-- **Title**: Security documentation claims BCrypt while implementation uses Argon2id
-- **Conclusion**: Documentation mismatch
-- **Evidence**: `repo/README.md:225`, `repo/backend/internal/auth/auth_service.go:63`
-- **Impact**: Reviewer/operator confusion.
-- **Minimum actionable fix**: Update README security statement to Argon2id, or switch implementation if BCrypt is required.
+- Conclusion: Cannot Confirm Statistically
+- Rationale:
+  - Static structure indicates differentiated pages/components and state classes.
+  - Final rendering quality, spacing fidelity, responsiveness behavior, and perceived polish require runtime/browser verification.
+- Evidence:
+  - frontend/src/App.vue
+  - frontend/src/pages/PlaybackPage.vue
+  - frontend/src/pages/MasterDataPage.vue
+- Manual verification note:
+  - Perform manual browser review on desktop/mobile with real API data.
 
-# 6. Security Review Summary
+## 5. Issues / Suggestions (Severity-Rated)
 
-- **Authentication entry points**: **Pass (Partial)**
-- Evidence: `repo/backend/internal/router/router.go:61`, `repo/backend/internal/handlers/auth_handler.go:66`, `repo/backend/internal/auth/auth_middleware.go:24`
-- Reasoning: JWT/session validation, idle/absolute timeout, revocation checks are implemented.
+### Blocker / High
 
-- **Route-level authorization**: **Pass (Partial)**
-- Evidence: `repo/backend/internal/router/router.go:78`, `repo/backend/internal/router/router.go:98`, `repo/backend/internal/router/router.go:192`
-- Reasoning: Role/permission middleware is broadly applied.
+1. Severity: High
 
-- **Object-level authorization**: **Fail**
-- Evidence: `repo/backend/internal/handlers/master_handler.go:153`, `repo/backend/internal/handlers/master_handler.go:180`
-- Reasoning: Record-level scope checks missing on detail/update/deactivate paths.
+- Title: Report object-level authorization missing on list/get endpoints
+- Conclusion: Fail
+- Evidence:
+  - backend/internal/handlers/report_handler.go:224 (GetRuns), backend/internal/handlers/report_handler.go:240 (GetRun)
+  - backend/internal/handlers/report_handler.go:275 (CheckAccess only in download)
+  - backend/internal/reports/report_service.go:200-253 (GetRuns has no user scope arguments), backend/internal/reports/report_service.go:534-584 (scope checks exist but only called by download/access-check handlers)
+- Impact:
+  - In-scope authenticated analyst/admin users can enumerate or read report runs outside intended city/department scope via endpoints that skip CheckAccess.
+- Minimum actionable fix:
+  - Enforce per-run access checks in GetRun and filter GetRuns by requester scope (schedule ScopeJSON and user scope) at query level.
+- Minimal verification path:
+  - Add API tests asserting 403/filtered results for cross-scope report runs on GET /reports/runs and GET /reports/runs/:id.
 
-- **Function-level authorization**: **Partial Pass**
-- Evidence: `repo/backend/internal/ingestion/ingestion_handler.go:91`, `repo/backend/internal/handlers/security_handler.go:29`
-- Reasoning: Many handlers re-check permission/role, but does not compensate for missing object scope in certain services.
+2. Severity: High
 
-- **Tenant/user data isolation**: **Fail**
-- Evidence: `repo/backend/internal/analytics/analytics_service.go:215`, `repo/backend/internal/reports/report_service.go:475`
-- Reasoning: City/department scope input exists but is not consistently applied to KPI/report datasets.
+- Title: Master-data scope can silently degrade to broad access when context assignment is missing
+- Conclusion: Fail
+- Evidence:
+  - backend/internal/org/org_service.go:433-438 (missing context returns nil,nil,nil)
+  - backend/internal/handlers/master_handler.go:65-76 (handler passes CityScope/DeptScope and NodeIDs)
+  - backend/internal/masterdata/master_service.go:170-173 (only NodeIDs applied to query)
+  - backend/internal/handlers/master_handler.go:401-407 (isRecordInScope returns true when scopeIDs missing but city/dept present)
+  - backend/internal/rbac/scope.go:10, backend/internal/rbac/scope.go:29 (empty scope treated unrestricted)
+- Impact:
+  - Data isolation can break for non-admin users without context assignments because query-level node scope is skipped and object checks may permissively pass.
+- Minimum actionable fix:
+  - Fail-closed when no context assignment exists for scoped roles, or enforce CityScope/DeptScope at query level when NodeIDs absent.
+- Minimal verification path:
+  - API tests for users with/without context assignment to prove 403 or scoped-only results on master list/get/update/deactivate.
 
-- **Admin/internal/debug protection**: **Pass**
-- Evidence: `repo/backend/internal/router/router.go:210`, `repo/backend/internal/router/router.go:225`, `repo/backend/internal/router/router.go:251`
-- Reasoning: Admin-sensitive groups are restricted to `system_admin`.
+3. Severity: High
 
-# 7. Tests and Logging Review
+- Title: Playback write operations are allowed for any authenticated role
+- Conclusion: Fail
+- Evidence:
+  - backend/internal/router/router.go:163, backend/internal/router/router.go:165, backend/internal/router/router.go:166
+  - Route group comment says all authenticated users for /media.
+- Impact:
+  - Standard users (who should consume approved content) can create/update/delete media assets, violating least privilege and prompt intent.
+- Minimum actionable fix:
+  - Apply role/permission guards on media mutations (POST/PUT/DELETE), retain read/stream for consumer roles.
+- Minimal verification path:
+  - Add RBAC API tests for standard_user expecting 403 on media mutations and 200 on read/playback routes.
 
-- **Unit tests**: **Partial Pass**
-- Evidence: `repo/backend/tests/unit/*.go`, `repo/frontend/src/tests/unit/*.test.js`
-- Reasoning: Many unit tests exist, including auth/RBAC/encryption/parsing.
+4. Severity: High
 
-- **API/integration tests**: **Partial Pass (insufficient realism)**
-- Evidence: `repo/backend/tests/api/helpers_test.go:30`, `repo/backend/tests/api/helpers_test.go:80`, `repo/backend/tests/api/master_api_test.go:113`
-- Reasoning: API tests are largely mocked/in-memory and do not exercise full production stack.
+- Title: Frontend-backend mismatch in lyrics parse response contract
+- Conclusion: Fail
+- Evidence:
+  - frontend/src/pages/PlaybackPage.vue:367-369 (expects string or fields lrc/content)
+  - backend/internal/handlers/playback_handler.go:269 (returns parsed lines object under lines)
+- Impact:
+  - UI can fail to render parsed lyrics from backend parse endpoint, undermining core playback lyric sync/search flow.
+- Minimum actionable fix:
+  - Align contract: either frontend consumes returned lines directly or backend returns raw LRC content in agreed field; update tests to assert exact payload schema.
+- Minimal verification path:
+  - Contract test validating parse endpoint JSON schema and frontend parser integration against that schema.
 
-- **Logging categories/observability**: **Pass**
-- Evidence: `repo/backend/internal/logging/logger.go:64`, `repo/backend/internal/logging/logger.go:119`
-- Reasoning: Structured request logging with correlation IDs and levels is present.
+5. Severity: High
 
-- **Sensitive leakage risk in logs/responses**: **Partial Pass**
-- Evidence: `repo/backend/internal/logging/logger.go:17`, `repo/backend/internal/logging/logger.go:161`, `repo/backend/internal/handlers/security_handler.go:258`
-- Reasoning: Query redaction exists; however sensitive operational flows still return high-impact tokens directly (password reset approval response).
+- Title: Frontend reports page uses incorrect API adapter semantics and query keys
+- Conclusion: Fail
+- Evidence:
+  - frontend/src/pages/ReportsPage.vue:373 calls reportsApi.getRuns(schedId, params)
+  - frontend/src/api/reports.js:27 defines getRuns(params = {}) single-arg API
+  - frontend/src/pages/ReportsPage.vue:368-369 uses startDate/endDate while backend expects date_from/date_to
+  - backend/internal/handlers/report_handler.go:210, 215, 216
+  - frontend/src/pages/ReportsPage.vue:397-398 expects accessData.allowed, backend returns has_access
+  - backend/internal/handlers/report_handler.go:319, 323
+- Impact:
+  - Report filtering and access-check logic can behave incorrectly, reducing reliability of report history and permission feedback.
+- Minimum actionable fix:
+  - Normalize frontend adapter usage and keys: pass one params object with schedule_id/date_from/date_to and consume has_access.
+- Minimal verification path:
+  - Unit tests on ReportsPage with real adapter contract and API contract tests asserting request parameter names and response field mapping.
 
-# 8. Test Coverage Assessment (Static Audit)
+### Medium / Low
 
-## 8.1 Test Overview
+6. Severity: Medium
 
-- Unit tests exist for backend and frontend.
-- API tests exist but are test-router simulations (not full production wiring).
-- Test frameworks: Go `testing`, Vitest (`jsdom`).
-- Test entry points are documented and scripted.
-- **Evidence**: `repo/README.md:124`, `repo/run_tests.sh:54`, `repo/run_tests.sh:85`, `repo/backend/tests/api/helpers_test.go:30`, `repo/frontend/vitest.config.js:7`
+- Title: Frontend route roles for Reports conflict with backend route authorization
+- Conclusion: Partial Fail
+- Evidence:
+  - frontend/src/router/index.js:45 includes standard_user
+  - backend/internal/router/router.go:192 allows only system_admin and operations_analyst
+- Impact:
+  - UI can route standard users to a page they cannot use server-side, causing avoidable 403 flows.
+- Minimum actionable fix:
+  - Align frontend route role metadata to backend authorization policy.
 
-## 8.2 Coverage Mapping Table
+7. Severity: Medium
 
-| Requirement / Risk Point | Mapped Test Case(s) | Key Assertion / Fixture / Mock | Coverage Assessment | Gap | Minimum Test Addition |
-|---|---|---|---|---|---|
-| Auth login/session/timeout | `backend/tests/unit/auth_test.go`, `backend/tests/api/auth_api_test.go` | JWT/session timeout and auth responses | basically covered | API path still relies on fake auth middleware in many files | Add full router+DB auth integration tests for session revocation/idle timeout in real middleware |
-| Route RBAC (role-level) | `backend/tests/api/rbac_api_test.go` | `RequireRole/RequirePermission` checks | basically covered | Mostly simulated routes, not full production router | Add tests against `router.SetupRouter` for critical protected endpoints |
-| Object-level scope authorization | `backend/tests/unit/scope_test.go`, `backend/tests/api/rbac_api_test.go:150` | scope helper function and synthetic scoped endpoint | insufficient | No test of actual master/report handlers enforcing scope | Add integration tests proving cross-scope access is denied for `GET/PUT /master/:entity/:id`, analytics/reports queries |
-| On-prem DB connector ingestion | `backend/tests/unit/connector_test.go:315` | Explicitly asserts DB pull returns empty | missing (for prompt requirement) | Test suite normalizes stub behavior instead of real ingestion | Add connector integration tests with local DB fixture and checkpoint/resume assertions |
-| Report generation and scope filtering | `frontend/src/tests/unit/reports.test.js` | mocked `checkAccess`, mocked run data | partially covered | Backend report dataset scoping not validated | Add backend integration tests for schedule scope (city/dept) affecting generated/exported rows |
-| Lyrics parse/search/jump fallback | `backend/tests/unit/lrc_parser_test.go`, `frontend/src/tests/unit/playback.test.js` | parse/search/fallback and visual pulse checks | basically covered | 200ms confirmation and real playback timing not verified statically | Add browser-level timing assertion tests (manual/E2E) for seek confirmation latency |
+- Title: Scope enforcement report test is non-assertive for pass/fail behavior
+- Conclusion: Partial Fail
+- Evidence:
+  - backend/tests/api/scope_enforcement_test.go:149, backend/tests/api/scope_enforcement_test.go:157
+- Impact:
+  - Test may pass without enforcing expected denial semantics, reducing confidence in report scope protections.
+- Minimum actionable fix:
+  - Replace logging-only branch with strict assertions for expected denial outcome and payload.
 
-## 8.3 Security Coverage Audit
+8. Severity: Medium
 
-- **Authentication**: partially covered.
-- Evidence: `repo/backend/tests/unit/auth_test.go`, `repo/backend/tests/api/auth_api_test.go`
-- Gap: full DB-backed middleware path coverage is limited.
+- Title: Security regression API tests are mostly simulated route stubs
+- Conclusion: Partial Fail
+- Evidence:
+  - backend/tests/api/security_regression_test.go:15, 16, 34
+- Impact:
+  - Important guards may diverge from real handlers without test failure.
+- Minimum actionable fix:
+  - Add real-router, DB-backed (or realistic integration) tests for critical security controls.
 
-- **Route authorization**: partially covered.
-- Evidence: `repo/backend/tests/api/rbac_api_test.go`
-- Gap: tests often use synthetic route setup, not full production registration.
+9. Severity: Low
 
-- **Object-level authorization**: missing for real handlers.
-- Evidence: `repo/backend/tests/api/rbac_api_test.go:150` (synthetic endpoint), no direct tests for master/report object scope.
+- Title: Frontend compile check in run_tests.sh cannot fail
+- Conclusion: Partial Fail
+- Evidence:
+  - run_tests.sh:39 uses "|| true" in condition, run_tests.sh:40 reports pass
+- Impact:
+  - CI/local confidence in compile checks is overstated.
+- Minimum actionable fix:
+  - Remove "|| true" and fail on non-zero vue-tsc exit, or rename step as dependency probe.
 
-- **Tenant/data isolation**: insufficient.
-- Evidence: `repo/backend/tests/api/security_regression_test.go:106` (simulated analytics route), while production analytics/report services ignore scope in queries.
+## 6. Security Review Summary
 
-- **Admin/internal protection**: basically covered.
-- Evidence: role tests plus route middleware declarations.
+- Authentication entry points: Pass
+  - Evidence: backend/internal/router/router.go:54-57, backend/internal/auth/auth_middleware.go:24-105, backend/internal/auth/auth_service.go:149-210.
+  - Notes: JWT/session checks, idle/absolute timeout checks are implemented.
 
-## 8.4 Final Coverage Judgment
+- Route-level authorization: Partial Pass
+  - Evidence: backend/internal/router/router.go:66-75, 145-156, 177-199.
+  - Risk: media mutation routes lack role/permission checks (router.go:163, 165, 166).
 
-- **Partial Pass**
-- Covered major auth/RBAC helper mechanics and many UI-level interactions.
-- Uncovered major risks: real object-scope authorization and on-prem DB connector behavior can remain broken while current tests still pass.
+- Object-level authorization: Partial Pass
+  - Evidence: backend/internal/handlers/master_handler.go:401-428 (record scope check), backend/internal/handlers/report_handler.go:275 (download check).
+  - Risk: report list/get endpoints bypass object-level access checks (report_handler.go:224, 240).
 
-# 9. Final Notes
+- Function-level authorization: Partial Pass
+  - Evidence: rbac permission middleware used for many master/version routes (backend/internal/router/router.go:91-126).
+  - Risk: inconsistent application for playback mutation routes.
 
-- Static analysis indicates a credible multi-module delivery with broad functionality.
-- The highest material risks are prompt-fit on real DB ingestion and data-scope isolation enforcement.
-- Runtime claims requiring execution (timing, actual scheduling under load, TLS deployment behavior) remain manual verification items.
+- Tenant/user data isolation: Fail
+  - Evidence: backend/internal/masterdata/master_service.go:170-173 scope only via NodeIDs; missing NodeIDs path can broaden access; backend/internal/handlers/master_handler.go:401-407 permissive fallback.
+
+- Admin/internal/debug protection: Partial Pass
+  - Evidence: audit/security/integration groups are system_admin-only (backend/internal/router/router.go:208-273).
+  - Risk: key security tests use simulated handlers rather than real routing path (backend/tests/api/security_regression_test.go:15-34).
+
+## 7. Tests and Logging Review
+
+- Unit tests: Partial Pass
+  - Exists across auth/rbac/encryption/masking/ingestion/parsing.
+  - Evidence: backend/tests/unit/_.go, frontend/src/tests/unit/_.test.js.
+
+- API/integration tests: Partial Pass
+  - Route contract and some auth/rbac/scope tests exist.
+  - Several critical tests are stubs/simulations or skip without DB.
+  - Evidence: backend/tests/api/contract_test.go:1-120, backend/tests/api/security_regression_test.go:15-34, backend/tests/api/scope_enforcement_test.go:22, 74, 129.
+
+- Logging categories/observability: Pass
+  - Structured JSON logging with module/action and correlation IDs; request middleware logs method/path/status/latency.
+  - Evidence: backend/internal/logging/logger.go:16-39, 118-160.
+
+- Sensitive-data leakage risk in logs/responses: Partial Pass
+  - Query-string redaction exists for sensitive keys.
+  - Body redaction is not centrally enforced for arbitrary logs; no direct plaintext secret logging observed in sampled code.
+  - Evidence: backend/internal/logging/logger.go:13, 88-99, 147-160.
+
+## 8. Test Coverage Assessment (Static Audit)
+
+### 8.1 Test Overview
+
+- Unit tests exist: Yes (Go + Vitest).
+- API/integration tests exist: Yes (backend/tests/api).
+- Frameworks:
+  - Backend: Go test.
+  - Frontend: Vitest + Vue Test Utils.
+- Test entry points documented: Yes.
+  - README.md:128, README.md:134, README.md:137
+  - run_tests.sh:54, run_tests.sh:85
+- Boundary caveat:
+  - Some API tests are simulated instead of real handler/database behavior.
+
+### 8.2 Coverage Mapping Table
+
+| Requirement / Risk Point          | Mapped Test Case(s)                                                             | Key Assertion / Fixture / Mock                            | Coverage Assessment | Gap                                                                                    | Minimum Test Addition                                                                             |
+| --------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Auth 401/lockout/session checks   | backend/tests/api/auth_api_test.go, backend/tests/unit/auth_test.go             | 401/403 checks and timeout/hash assertions                | basically covered   | Real middleware+DB revocation paths not fully proven in all branches                   | Add integration test against real AuthRequired with seeded session revocation and idle expiry     |
+| RBAC role matrix                  | backend/tests/unit/rbac_test.go                                                 | HasPermission matrix assertions                           | basically covered   | Route-specific RBAC for media mutation not tested                                      | Add API RBAC tests for POST/PUT/DELETE /media by standard_user                                    |
+| Master scope isolation            | backend/tests/api/scope_enforcement_test.go:48-96                               | Cross-scope GET/PUT denial checks                         | partially covered   | Missing no-context-assignment scenario; permissive fallback untested                   | Add tests for user with city/dept but no context assignment on list/get/update                    |
+| Report scope isolation            | backend/tests/api/scope_enforcement_test.go:126-157                             | access-check call with logs only                          | insufficient        | Non-assertive test; no assertions for list/get run restrictions                        | Add strict tests for GET /reports/runs and /reports/runs/:id cross-scope denial/filtering         |
+| Playback LRC behavior             | backend/tests/unit/lrc_parser_test.go, frontend/src/tests/unit/playback.test.js | Parser unit tests and UI fallback/search tests with mocks | partially covered   | No contract test validates parse endpoint payload shape consumed by frontend           | Add contract + integration test for POST /media/:id/lyrics/parse payload and frontend consumption |
+| Reports frontend adapter contract | frontend/src/tests/unit/reports.test.js                                         | checkAccess mocked with allowed field                     | insufficient        | Test doubles do not match backend has_access schema; getRuns param mismatch not caught | Add API contract tests for checkAccess schema and query param names                               |
+| Ingestion checkpoint/retry model  | backend/tests/unit/ingestion_test.go, connector tests                           | Unit-level state transitions/checkpoint logic             | basically covered   | Limited end-to-end scheduler/job persistence verification                              | Add DB-backed integration test for retry promotion and checkpoint resume                          |
+| Dual-approval audit deletion      | backend/tests/api/audit_api_test.go                                             | Self-approval and duplicate approval denied               | basically covered   | Real deletion execution against persistent DB path not fully validated here            | Add integration test verifying approved->executed state and affected rows                         |
+
+### 8.3 Security Coverage Audit
+
+- Authentication: partially covered
+  - Good unit/API coverage exists; some real DB/middleware combinations remain unproven.
+- Route authorization: partially covered
+  - Many routes covered, but media mutation route-authorization defect remains undetected.
+- Object-level authorization: insufficient
+  - Master partial coverage exists; report list/get object-level checks lack meaningful tests.
+- Tenant/data isolation: insufficient
+  - No robust coverage for missing-context fallback behavior in master/report flows.
+- Admin/internal protection: partially covered
+  - Some tests use simulated routers, leaving divergence risk.
+
+### 8.4 Final Coverage Judgment
+
+- Final coverage judgment: Partial Pass
+- Boundary explanation:
+  - Covered: basic auth, RBAC matrix, parser/crypto units, and route existence contracts.
+  - Uncovered or weakly covered: report object-level scope enforcement, frontend-backend contract fidelity for reports/playback, and no-context-assignment isolation edge cases.
+  - Severe defects could still remain undetected while tests pass.
+
+## 9. Final Notes
+
+- The repository is substantial and broadly aligned, but the current delivery cannot be accepted as fully secure and prompt-complete due to multiple independent High-severity issues in authorization and API contract consistency.
+- Several findings are root-cause-level and should be fixed before any acceptance sign-off.
