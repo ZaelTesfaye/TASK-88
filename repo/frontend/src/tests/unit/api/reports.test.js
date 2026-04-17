@@ -16,10 +16,11 @@ describe('api/reports.js — full coverage', () => {
   it('triggerSchedule', async () => { ok({ id: 1 }); await api.triggerSchedule(5); expect(captured.url).toBe('/reports/schedules/5/trigger'); });
   it('getRuns', async () => { ok({ items: [] }); await api.getRuns({ schedule_id: 1 }); expect(captured.url).toBe('/reports/runs'); });
   it('getRun', async () => { ok({ id: 1 }); await api.getRun(1); expect(captured.url).toBe('/reports/runs/1'); });
-  it('downloadRun returns URL or triggers download', () => {
-    const url = api.downloadRun(5);
-    // May return a promise or a URL — just ensure it's callable.
-    expect(url).toBeDefined();
+  it('downloadRun fetches blob', async () => {
+    ok(new Blob(['csv data'], { type: 'text/csv' }));
+    await api.downloadRun(5);
+    expect(captured.url).toBe('/reports/runs/5/download');
+    expect(captured.responseType).toBe('blob');
   });
   it('checkAccess', async () => { ok({ has_access: true }); await api.checkAccess(5); expect(captured.url).toBe('/reports/runs/5/access-check'); });
 });
