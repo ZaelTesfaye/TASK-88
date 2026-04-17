@@ -1,11 +1,11 @@
-import client from './client.js';
+import client from "./client.js";
 
 export function getSources(params = {}) {
-  return client.get('/ingestion/sources', { params });
+  return client.get("/ingestion/sources", { params });
 }
 
 export function createSource(payload) {
-  return client.post('/ingestion/sources', payload);
+  return client.post("/ingestion/sources", payload);
 }
 
 export function getSource(sourceId) {
@@ -21,11 +21,11 @@ export function deleteSource(sourceId) {
 }
 
 export function getJobs(params = {}) {
-  return client.get('/ingestion/jobs', { params });
+  return client.get("/ingestion/jobs", { params });
 }
 
 export function createJob(payload) {
-  return client.post('/ingestion/jobs', payload);
+  return client.post("/ingestion/jobs", payload);
 }
 
 export function getJob(jobId) {
@@ -46,4 +46,22 @@ export function getCheckpoints(jobId) {
 
 export function getFailures(jobId, params = {}) {
   return client.get(`/ingestion/jobs/${jobId}/failures`, { params });
+}
+
+// Compatibility aliases used by page components.
+export function getConnectorHealth(connectorId) {
+  return client.get(`/ingestion/connectors/${connectorId}/health`);
+}
+
+export function getCapabilities(connectorId) {
+  return client.get(`/ingestion/connectors/${connectorId}/capabilities`);
+}
+
+export function runJob(importSourceId, options = {}) {
+  return client.post("/ingestion/jobs/run", {
+    import_source_id: importSourceId,
+    priority: options.priority ?? 0,
+    dependency_group: options.dependency_group ?? "",
+    mode: options.mode ?? "incremental",
+  });
 }
