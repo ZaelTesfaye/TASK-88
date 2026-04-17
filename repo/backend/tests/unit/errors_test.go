@@ -1,7 +1,11 @@
 package unit
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/gin-gonic/gin"
 
 	appErrors "backend/internal/errors"
 )
@@ -22,5 +26,18 @@ func TestAppErrorWithDetails(t *testing.T) {
 	}
 	if err.Code != "VALIDATION_ERROR" {
 		t.Errorf("Code = %q, want VALIDATION_ERROR", err.Code)
+	}
+}
+
+func TestRespondForbidden(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("correlation_id", "test-cid")
+
+	appErrors.RespondForbidden(c, "access denied")
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w.Code)
 	}
 }

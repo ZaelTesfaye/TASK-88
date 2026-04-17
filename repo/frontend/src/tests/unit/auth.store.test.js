@@ -178,4 +178,30 @@ describe('Auth Store', () => {
     expect(store.hasAnyRole(['system_admin', 'operations_analyst'])).toBe(true);
     expect(store.hasAnyRole(['viewer', 'data_steward'])).toBe(false);
   });
+
+  it('restoreSession loads state from localStorage', () => {
+    localStorage.setItem('auth_token', 'stored-token');
+    localStorage.setItem('auth_refresh_token', 'stored-refresh');
+    localStorage.setItem('auth_user', JSON.stringify({ id: '5', username: 'stored', role: 'viewer' }));
+
+    const store = useAuthStore();
+    expect(store.token).toBe('stored-token');
+    expect(store.user?.username).toBe('stored');
+  });
+
+  it('restoreSession clears state on corrupted user JSON', () => {
+    localStorage.setItem('auth_token', 'stored-token');
+    localStorage.setItem('auth_user', 'not-valid-json{{{');
+
+    const store = useAuthStore();
+    // Corrupted user JSON triggers clearAuth() inside restoreSession.
+    expect(store.user).toBeNull();
+  });
+
+  it('login failure propagates error', async () => {
+    authApi.login.mockRejectedValue({ code: 'AUTH_REQUIRED', message: 'bad creds' });
+    const store = useAuthStore();
+    await expect(store.login('x', 'y')).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+    expect(store.token).toBeNull();
+  });
 });
