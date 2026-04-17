@@ -1,3 +1,5 @@
+//go:build integration
+
 package api
 
 import (
@@ -68,7 +70,7 @@ func teardownConnectorFixture(dsn string) {
 func TestDatabaseConnectorFullPull(t *testing.T) {
 	dsn := getConnectorTestDSN()
 	if dsn == "" {
-		t.Skip("TEST_DB_DSN not set — skipping DB connector integration test")
+		t.Fatal("TEST_DB_DSN must be set to run no-mock API tests")
 	}
 
 	if err := setupConnectorFixture(dsn); err != nil {
@@ -105,7 +107,7 @@ func TestDatabaseConnectorFullPull(t *testing.T) {
 func TestDatabaseConnectorIncrementalPull(t *testing.T) {
 	dsn := getConnectorTestDSN()
 	if dsn == "" {
-		t.Skip("TEST_DB_DSN not set — skipping DB connector integration test")
+		t.Fatal("TEST_DB_DSN must be set to run no-mock API tests")
 	}
 
 	if err := setupConnectorFixture(dsn); err != nil {
@@ -159,7 +161,7 @@ func TestDatabaseConnectorConnectionFailure(t *testing.T) {
 func TestDatabaseConnectorHealthCheck(t *testing.T) {
 	dsn := getConnectorTestDSN()
 	if dsn == "" {
-		t.Skip("TEST_DB_DSN not set — skipping DB connector integration test")
+		t.Fatal("TEST_DB_DSN must be set to run no-mock API tests")
 	}
 
 	config := parseDSNToConfig(dsn)

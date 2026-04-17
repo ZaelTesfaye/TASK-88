@@ -1,90 +1,24 @@
 // Package contract contains tests that verify the API surface contract
-// between the frontend adapters and the backend router.  These tests
-// do not hit a database — they only inspect registered routes and
-// validate request/response schemas.
+// between the frontend adapters and the backend router.
 package contract
 
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 
-	"backend/internal/auth"
 	"backend/internal/config"
-	appErrors "backend/internal/errors"
 	"backend/internal/middleware"
-	"backend/internal/models"
 	"backend/internal/router"
 )
 
 func init() { gin.SetMode(gin.TestMode) }
 
-// ---------- lightweight helpers (no external deps) ----------
-
-func signToken(userID uint, role, city, dept string, expiresIn time.Duration) string {
-	cfg := config.GetConfig()
-	now := time.Now()
-	claims := auth.Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   fmt.Sprintf("%d", userID),
-			ID:        fmt.Sprintf("contract-jti-%d-%d", userID, now.UnixNano()),
-			Issuer:    cfg.JWTIssuer,
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(expiresIn)),
-		},
-		Role:            role,
-		CityScope:       city,
-		DepartmentScope: dept,
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	s, _ := token.SignedString([]byte(cfg.JWTSecret))
-	return s
-}
-
-func fakeAuthMiddleware() gin.HandlerFunc {
-	cfg := config.GetConfig()
-	return func(c *gin.Context) {
-		h := c.GetHeader("Authorization")
-		if len(h) < 8 || h[:7] != "Bearer " {
-			appErrors.RespondUnauthorized(c, "missing token")
-			return
-		}
-		claims := &auth.Claims{}
-		tok, err := jwt.ParseWithClaims(h[7:], claims, func(t *jwt.Token) (interface{}, error) {
-			return []byte(cfg.JWTSecret), nil
-		})
-		if err != nil || !tok.Valid {
-			appErrors.RespondUnauthorized(c, "invalid token")
-			return
-		}
-		var uid uint
-		fmt.Sscanf(claims.Subject, "%d", &uid)
-		user := &models.User{ID: uid, Username: fmt.Sprintf("user_%d", uid), Role: claims.Role,
-			CityScope: claims.CityScope, DepartmentScope: claims.DepartmentScope, Status: "active"}
-		c.Set("current_user", user)
-		c.Set("current_claims", claims)
-		c.Set("user_id", user.ID)
-		c.Set("user_role", user.Role)
-		c.Set("city_scope", user.CityScope)
-		c.Set("dept_scope", user.DepartmentScope)
-		c.Next()
-	}
-}
-
-func testRouter() *gin.Engine {
-	r := gin.New()
-	r.Use(middleware.RequestIDMiddleware())
-	r.Use(appErrors.ErrorHandlerMiddleware())
-	return r
-}
-
+// doRequest makes an HTTP request. No fakeAuthMiddleware.
 func doRequest(r *gin.Engine, method, path, token string, body interface{}) *httptest.ResponseRecorder {
 	var buf *bytes.Buffer
 	if body != nil {
@@ -94,6 +28,7 @@ func doRequest(r *gin.Engine, method, path, token string, body interface{}) *htt
 		buf = bytes.NewBuffer(nil)
 	}
 	req, _ := http.NewRequest(method, path, buf)
+	req.RemoteAddr = "127.0.0.1:12345"
 	req.Header.Set("Content-Type", "application/json")
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -110,7 +45,8 @@ func parseBody(w *httptest.ResponseRecorder) map[string]interface{} {
 }
 
 // ==========================================================================
-// Route contract: every frontend API adapter URL must match a backend route
+// Route contract: every frontend API adapter URL must match a backend route.
+// Uses the real production router (no fakeAuthMiddleware).
 // ==========================================================================
 
 func TestAPIContractRoutes(t *testing.T) {
@@ -240,16 +176,53 @@ func TestAPIContractRoutes(t *testing.T) {
 			t.Errorf("expected route %s not registered in router", key)
 		}
 	}
+
+	// Verify health endpoint returns correct shape via real router.
+	w := doRequest(r, "GET", "/health", "", nil)
+	if w.Code != http.StatusOK {
+		t.Errorf("GET /health: expected 200, got %d", w.Code)
+	}
+	hb := parseBody(w)
+	if hb["status"] != "healthy" {
+		t.Errorf("GET /health: expected status 'healthy', got %v", hb["status"])
+	}
+	if hb["timestamp"] == nil || hb["timestamp"] == "" {
+		t.Error("GET /health: expected non-empty timestamp")
+	}
+
+	// Verify unauthenticated request returns 401 with error envelope.
+	w2 := doRequest(r, "GET", "/api/v1/org/tree", "", nil)
+	if w2.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w2.Code)
+	}
+	body401 := parseBody(w2)
+	if body401["code"] == nil {
+		t.Error("401 response must contain 'code'")
+	}
+	if body401["message"] == nil {
+		t.Error("401 response must contain 'message'")
+	}
+
+	// Verify login endpoint accepts POST with body validation.
+	w3 := doRequest(r, "POST", "/api/v1/auth/login", "", nil)
+	if w3.Code != http.StatusBadRequest {
+		t.Errorf("POST /auth/login with no body: expected 400, got %d", w3.Code)
+	}
+	body400 := parseBody(w3)
+	if body400["code"] == nil {
+		t.Error("400 response must contain 'code'")
+	}
 }
 
 // ==========================================================================
-// Field-name contracts
+// Field-name contract: parent_id must be snake_case
 // ==========================================================================
 
 func TestOrgCreationParentIDFieldName(t *testing.T) {
-	r := testRouter()
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(middleware.RequestIDMiddleware())
 	p := r.Group("/api/v1")
-	p.Use(fakeAuthMiddleware())
 	p.POST("/org/nodes", func(c *gin.Context) {
 		var b struct {
 			ParentID   *uint  `json:"parent_id"`
@@ -268,9 +241,7 @@ func TestOrgCreationParentIDFieldName(t *testing.T) {
 		}
 	})
 
-	tok := signToken(1, "system_admin", "*", "*", 30*time.Minute)
-
-	w := doRequest(r, "POST", "/api/v1/org/nodes", tok, map[string]interface{}{
+	w := doRequest(r, "POST", "/api/v1/org/nodes", "", map[string]interface{}{
 		"parent_id": 42, "name": "N", "level_code": "city", "level_label": "City",
 	})
 	if w.Code != 200 {
@@ -280,78 +251,10 @@ func TestOrgCreationParentIDFieldName(t *testing.T) {
 		t.Errorf("parent_id not parsed from snake_case payload")
 	}
 
-	w2 := doRequest(r, "POST", "/api/v1/org/nodes", tok, map[string]interface{}{
+	w2 := doRequest(r, "POST", "/api/v1/org/nodes", "", map[string]interface{}{
 		"parentId": 42, "name": "N", "level_code": "city", "level_label": "City",
 	})
 	if parseBody(w2)["parent_id"] != nil {
 		t.Error("camelCase parentId must NOT be recognised — backend expects snake_case")
-	}
-}
-
-// ==========================================================================
-// Response-schema contracts
-// ==========================================================================
-
-func TestLyricsParseResponseSchema(t *testing.T) {
-	r := testRouter()
-	p := r.Group("/api/v1")
-	p.Use(fakeAuthMiddleware())
-	p.POST("/media/:id/lyrics/parse", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status": "success", "line_count": 2,
-			"lines": []gin.H{{"time": 0.0, "text": "a"}, {"time": 1.0, "text": "b"}},
-			"lrc":   "[00:00.00]a\n[00:01.00]b",
-		})
-	})
-
-	tok := signToken(1, "system_admin", "*", "*", 30*time.Minute)
-	resp := parseBody(doRequest(r, "POST", "/api/v1/media/1/lyrics/parse", tok, nil))
-	if _, ok := resp["lrc"].(string); !ok {
-		t.Fatal("response must contain string 'lrc' field for PlaybackPage.vue compatibility")
-	}
-	if resp["lines"] == nil {
-		t.Fatal("response must contain 'lines' field")
-	}
-}
-
-func TestReportsAccessCheckResponseSchema(t *testing.T) {
-	r := testRouter()
-	p := r.Group("/api/v1")
-	p.Use(fakeAuthMiddleware())
-	p.GET("/reports/runs/:id/access-check", func(c *gin.Context) {
-		c.JSON(200, gin.H{"has_access": true})
-	})
-
-	tok := signToken(1, "system_admin", "*", "*", 30*time.Minute)
-	resp := parseBody(doRequest(r, "GET", "/api/v1/reports/runs/1/access-check", tok, nil))
-	if _, ok := resp["has_access"].(bool); !ok {
-		t.Fatal("response must contain bool 'has_access', not 'allowed'")
-	}
-}
-
-func TestReportsListRunsQueryParams(t *testing.T) {
-	r := testRouter()
-	p := r.Group("/api/v1")
-	p.Use(fakeAuthMiddleware())
-
-	var got struct{ ScheduleID, DateFrom, DateTo string }
-	p.GET("/reports/runs", func(c *gin.Context) {
-		got.ScheduleID = c.Query("schedule_id")
-		got.DateFrom = c.Query("date_from")
-		got.DateTo = c.Query("date_to")
-		c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-	})
-
-	tok := signToken(1, "system_admin", "*", "*", 30*time.Minute)
-	doRequest(r, "GET", "/api/v1/reports/runs?schedule_id=5&date_from=2025-01-01&date_to=2025-12-31", tok, nil)
-
-	if got.ScheduleID != "5" {
-		t.Errorf("schedule_id: want 5, got %q", got.ScheduleID)
-	}
-	if got.DateFrom != "2025-01-01" {
-		t.Errorf("date_from: want 2025-01-01, got %q", got.DateFrom)
-	}
-	if got.DateTo != "2025-12-31" {
-		t.Errorf("date_to: want 2025-12-31, got %q", got.DateTo)
 	}
 }

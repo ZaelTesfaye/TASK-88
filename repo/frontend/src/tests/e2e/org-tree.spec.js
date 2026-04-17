@@ -3,6 +3,8 @@ import { test, expect } from '@playwright/test';
 
 /**
  * E2E: Org tree management — create node, verify hierarchy, delete node.
+ *
+ * Prerequisites: full stack running with seeded admin + root org node.
  */
 
 const ADMIN_USER = 'admin';
@@ -21,11 +23,11 @@ test.describe('Org Tree Management', () => {
     await login(page);
   });
 
-  test('navigate to org tree page', async ({ page }) => {
+  test('navigate to org tree page and see root node', async ({ page }) => {
     await page.click('a[href*="/org"], .nav-item:has-text("Org Tree")');
     await expect(page).toHaveURL(/\/org/, { timeout: 5000 });
 
-    // Tree should render — look for root org node
+    // Tree must render — root org node must be visible.
     await expect(
       page.locator('text=Root Organisation, text=root, [class*="tree"]')
     ).toBeVisible({ timeout: 5000 });
@@ -35,81 +37,77 @@ test.describe('Org Tree Management', () => {
     await page.goto('/org');
     await page.waitForTimeout(1000);
 
+    // Add button must exist.
     const addBtn = page.locator('button:has-text("Add"), button:has-text("Create"), button:has-text("New")');
-    if (await addBtn.count() > 0) {
-      await addBtn.first().click();
-      await page.waitForTimeout(500);
+    await expect(addBtn.first()).toBeVisible({ timeout: 3000 });
+    await addBtn.first().click();
+    await page.waitForTimeout(500);
 
-      // Try submitting empty — should show validation errors
-      const submitBtn = page.locator(
-        'button[type="submit"], button:has-text("Save"), button:has-text("Create")'
-      ).last();
-      if (await submitBtn.count() > 0) {
-        await submitBtn.click();
-        await page.waitForTimeout(500);
+    // Submit empty — validation errors must appear.
+    const submitBtn = page.locator(
+      'button[type="submit"], button:has-text("Save"), button:has-text("Create")'
+    ).last();
+    await expect(submitBtn).toBeVisible({ timeout: 3000 });
+    await submitBtn.click();
+    await page.waitForTimeout(500);
 
-        const errors = page.locator('[class*="error"], [class*="invalid"]');
-        await expect(errors.first()).toBeVisible({ timeout: 3000 });
-      }
-    }
+    const errors = page.locator('[class*="error"], [class*="invalid"]');
+    await expect(errors.first()).toBeVisible({ timeout: 3000 });
   });
 
   test('create a child node under root', async ({ page }) => {
     await page.goto('/org');
     await page.waitForTimeout(1000);
 
+    // Add button must exist.
     const addBtn = page.locator('button:has-text("Add"), button:has-text("Create"), button:has-text("New")');
-    if (await addBtn.count() > 0) {
-      await addBtn.first().click();
-      await page.waitForTimeout(500);
+    await expect(addBtn.first()).toBeVisible({ timeout: 3000 });
+    await addBtn.first().click();
+    await page.waitForTimeout(500);
 
-      const nameInput = page.locator(
-        'input[name="name"], input[placeholder*="name" i]'
-      );
-      if (await nameInput.count() > 0) {
-        const nodeName = 'E2E Region ' + Date.now().toString().slice(-4);
-        await nameInput.first().fill(nodeName);
+    // Name input must exist.
+    const nameInput = page.locator('input[name="name"], input[placeholder*="name" i]');
+    await expect(nameInput.first()).toBeVisible({ timeout: 3000 });
 
-        // Fill level_code if present
-        const levelSelect = page.locator(
-          'select[name="level_code"], [class*="select"]:has-text("Level")'
-        );
-        if (await levelSelect.count() > 0) {
-          await levelSelect.first().selectOption({ label: 'Region' }).catch(() => {});
-        }
+    const nodeName = 'E2E Region ' + Date.now().toString().slice(-4);
+    await nameInput.first().fill(nodeName);
 
-        // Fill level_label if present
-        const labelInput = page.locator('input[name="level_label"]');
-        if (await labelInput.count() > 0) {
-          await labelInput.first().fill('Region');
-        }
-
-        const submitBtn = page.locator(
-          'button[type="submit"], button:has-text("Save"), button:has-text("Create")'
-        ).last();
-        await submitBtn.click();
-        await page.waitForTimeout(1500);
-
-        // Verify the new node appears in the tree
-        await expect(page.locator(`text=${nodeName}`)).toBeVisible({ timeout: 5000 });
-      }
+    // Fill level_code if present.
+    const levelSelect = page.locator('select[name="level_code"], [class*="select"]:has-text("Level")');
+    if (await levelSelect.count() > 0) {
+      await levelSelect.first().selectOption({ label: 'Region' }).catch(() => {});
     }
+
+    // Fill level_label if present.
+    const labelInput = page.locator('input[name="level_label"]');
+    if (await labelInput.count() > 0) {
+      await labelInput.first().fill('Region');
+    }
+
+    const submitBtn = page.locator(
+      'button[type="submit"], button:has-text("Save"), button:has-text("Create")'
+    ).last();
+    await submitBtn.click();
+    await page.waitForTimeout(1500);
+
+    // Verify the new node appears in the tree — hard assertion.
+    await expect(page.locator(`text=${nodeName}`)).toBeVisible({ timeout: 5000 });
   });
 
   test('delete node shows confirmation warning', async ({ page }) => {
     await page.goto('/org');
     await page.waitForTimeout(1000);
 
+    // Delete button must exist on at least one node.
     const deleteBtn = page.locator(
       'button:has-text("Delete"), button[title*="delete" i], button[aria-label*="delete" i]'
     );
-    if (await deleteBtn.count() > 0) {
-      await deleteBtn.first().click();
+    await expect(deleteBtn.first()).toBeVisible({ timeout: 5000 });
+    await deleteBtn.first().click();
 
-      // A confirmation dialog should appear
-      await expect(
-        page.locator('[class*="dialog"], [class*="modal"], [role="dialog"]')
-      ).toBeVisible({ timeout: 3000 });
-    }
+    // Confirmation dialog must appear.
+    await expect(
+      page.locator('[class*="dialog"], [class*="modal"], [role="dialog"]')
+    ).toBeVisible({ timeout: 3000 });
   });
 });

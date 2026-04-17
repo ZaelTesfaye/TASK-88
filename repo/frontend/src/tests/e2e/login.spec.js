@@ -31,16 +31,26 @@ test.describe('Login', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('successful login redirects to app', async ({ page }) => {
+  test('successful login redirects to app and returns token', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="text"], input[name="username"]', ADMIN_USER);
     await page.fill('input[type="password"]', ADMIN_PASS);
-    await page.click('button[type="submit"]');
 
-    // Should navigate away from /login to the main app
+    // Intercept the login API call to verify backend response.
+    const [response] = await Promise.all([
+      page.waitForResponse(r => r.url().includes('/api/v1/auth/login') && r.request().method() === 'POST'),
+      page.click('button[type="submit"]'),
+    ]);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body).toHaveProperty('token');
+    expect(body).toHaveProperty('user');
+    expect(body.user).toHaveProperty('username', ADMIN_USER);
+
+    // Should navigate away from /login to the main app.
     await expect(page).not.toHaveURL(/\/login/, { timeout: 10000 });
 
-    // Sidebar should be visible
+    // Sidebar should be visible — confirms persisted auth state.
     await expect(page.locator('.sidebar, nav, [class*="sidebar"]')).toBeVisible();
   });
 

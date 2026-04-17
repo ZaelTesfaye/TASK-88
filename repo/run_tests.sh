@@ -24,6 +24,15 @@ run_backend_go() {
         sh -c "$1"
 }
 
+run_frontend_node() {
+    MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*" docker run --rm \
+        -v "$FRONTEND_DIR:/app" \
+        -v "$COVERAGE_DIR:/coverage" \
+        -w /app \
+        node:20-alpine \
+        sh -c "$1"
+}
+
 # ==================== COMPILE CHECKS ====================
 echo "==================== COMPILE CHECKS ===================="
 echo ""
@@ -43,12 +52,7 @@ TOTAL=$((TOTAL + 1))
 
 echo ""
 echo "--- Compile Check: Frontend ---"
-cd "$FRONTEND_DIR"
-if [ ! -d "node_modules" ]; then
-    echo "Installing frontend dependencies..."
-    npm install --silent 2>&1
-fi
-if npm run build 2>&1; then
+if run_frontend_node "npm install --silent 2>&1 && npm run build 2>&1"; then
     echo "[PASS] Frontend build check passed"
     PASSED=$((PASSED + 1))
 else
@@ -165,12 +169,7 @@ echo ""
 
 # Frontend tests with coverage
 echo "--- Frontend Unit Tests + Coverage ---"
-cd "$FRONTEND_DIR"
-if [ ! -d "node_modules" ]; then
-    echo "Installing frontend dependencies..."
-    npm install --silent 2>&1
-fi
-if npx vitest run --reporter=verbose --coverage --coverage.reportsDirectory="$COVERAGE_DIR/frontend" 2>&1; then
+if run_frontend_node "npm install --silent 2>&1 && npx vitest run --reporter=verbose --coverage --coverage.reportsDirectory=/coverage/frontend 2>&1"; then
     echo "[PASS] Frontend tests passed"
     PASSED=$((PASSED + 1))
 else
@@ -184,10 +183,10 @@ echo ""
 echo "--- Frontend Coverage Threshold ---"
 FRONTEND_COV_MIN=90
 if [ -f "$COVERAGE_DIR/frontend/coverage-summary.json" ]; then
-    FRONTEND_COV=$(node -e "
-      const s = require('$COVERAGE_DIR/frontend/coverage-summary.json');
+    FRONTEND_COV=$(run_frontend_node "node -e \"
+      const s = require('/coverage/frontend/coverage-summary.json');
       console.log(s.total.statements.pct);
-    " 2>/dev/null || echo "0")
+    \"" 2>/dev/null || echo "0")
     FRONTEND_COV_INT=$(echo "$FRONTEND_COV" | awk '{printf "%d", $1}')
     echo "Frontend statement coverage: ${FRONTEND_COV}% (threshold: ${FRONTEND_COV_MIN}%)"
 
@@ -203,12 +202,11 @@ else
 fi
 TOTAL=$((TOTAL + 1))
 
-# Frontend e2e tests (if Playwright is installed)
+# Frontend e2e tests (if Playwright config exists)
 echo ""
 echo "--- Frontend E2E Tests ---"
-cd "$FRONTEND_DIR"
-if [ -f "playwright.config.js" ] && command -v npx &>/dev/null; then
-    if npx playwright test --reporter=list 2>&1; then
+if [ -f "$FRONTEND_DIR/playwright.config.js" ]; then
+    if run_frontend_node "npx playwright install --with-deps chromium 2>&1 && npx playwright test --reporter=list 2>&1"; then
         echo "[PASS] Frontend e2e tests passed"
         PASSED=$((PASSED + 1))
     else

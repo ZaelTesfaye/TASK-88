@@ -6,25 +6,27 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
 	appErrors "backend/internal/errors"
-	"backend/internal/rbac"
+	"backend/internal/config"
+	"backend/internal/middleware"
+	"backend/internal/router"
 )
 
-// setupErrorRouter creates a router with endpoints that return various error codes.
+// setupErrorRouter creates a router with public endpoints that exercise the
+// error framework.  No fakeAuthMiddleware — endpoints are unauthenticated.
 func setupErrorRouter() *gin.Engine {
-	r := testRouter()
-	protected := r.Group("/api/v1")
-	protected.Use(fakeAuthMiddleware())
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(middleware.RequestIDMiddleware())
+	r.Use(appErrors.ErrorHandlerMiddleware())
 
-	protected.GET("/not-found", func(c *gin.Context) {
+	r.GET("/test/not-found", func(c *gin.Context) {
 		appErrors.RespondNotFound(c, "the requested resource was not found")
 	})
-
-	protected.POST("/validate", func(c *gin.Context) {
+	r.POST("/test/validate", func(c *gin.Context) {
 		var body struct {
 			Name  string `json:"name" binding:"required"`
 			Email string `json:"email" binding:"required"`
@@ -40,25 +42,16 @@ func setupErrorRouter() *gin.Engine {
 		}
 		c.JSON(http.StatusOK, gin.H{"data": body})
 	})
-
-	protected.POST("/conflict", func(c *gin.Context) {
+	r.POST("/test/conflict", func(c *gin.Context) {
 		appErrors.RespondConflict(c, "version activation conflict", gin.H{
 			"entity": "sku", "version_id": 42,
 		})
 	})
-
-	protected.POST("/bad-request", func(c *gin.Context) {
+	r.POST("/test/bad-request", func(c *gin.Context) {
 		appErrors.RespondBadRequest(c, "invalid input", gin.H{"reason": "malformed JSON"})
 	})
-
-	protected.GET("/internal-error", func(c *gin.Context) {
+	r.GET("/test/internal-error", func(c *gin.Context) {
 		appErrors.RespondInternalError(c, "unexpected failure")
-	})
-
-	adminOnly := protected.Group("/admin-only")
-	adminOnly.Use(rbac.RequireRole(rbac.SystemAdmin))
-	adminOnly.GET("/resource", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "admin resource"})
 	})
 
 	return r
@@ -66,8 +59,7 @@ func setupErrorRouter() *gin.Engine {
 
 func TestNotFoundReturns404(t *testing.T) {
 	r := setupErrorRouter()
-	tok := signToken(1, rbac.SystemAdmin, "*", "*", 30*time.Minute)
-	w := doRequest(r, "GET", "/api/v1/not-found", tok, nil)
+	w := doRequest(r, "GET", "/test/not-found", "", nil)
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", w.Code)
 	}
@@ -85,8 +77,7 @@ func TestNotFoundReturns404(t *testing.T) {
 
 func TestValidationReturns422(t *testing.T) {
 	r := setupErrorRouter()
-	tok := signToken(1, rbac.SystemAdmin, "*", "*", 30*time.Minute)
-	w := doRequest(r, "POST", "/api/v1/validate", tok, map[string]string{})
+	w := doRequest(r, "POST", "/test/validate", "", map[string]string{})
 	if w.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("expected 422, got %d", w.Code)
 	}
@@ -103,8 +94,7 @@ func TestValidationReturns422(t *testing.T) {
 
 func TestConflictReturns409(t *testing.T) {
 	r := setupErrorRouter()
-	tok := signToken(1, rbac.SystemAdmin, "*", "*", 30*time.Minute)
-	w := doRequest(r, "POST", "/api/v1/conflict", tok, nil)
+	w := doRequest(r, "POST", "/test/conflict", "", nil)
 	if w.Code != http.StatusConflict {
 		t.Fatalf("expected 409, got %d", w.Code)
 	}
@@ -116,7 +106,6 @@ func TestConflictReturns409(t *testing.T) {
 
 func TestUnifiedErrorContract(t *testing.T) {
 	r := setupErrorRouter()
-	tok := signToken(1, rbac.SystemAdmin, "*", "*", 30*time.Minute)
 
 	cases := []struct {
 		name   string
@@ -125,11 +114,11 @@ func TestUnifiedErrorContract(t *testing.T) {
 		body   interface{}
 		status int
 	}{
-		{"not found", "GET", "/api/v1/not-found", nil, 404},
-		{"validation", "POST", "/api/v1/validate", map[string]string{}, 422},
-		{"conflict", "POST", "/api/v1/conflict", nil, 409},
-		{"bad request", "POST", "/api/v1/bad-request", nil, 400},
-		{"internal", "GET", "/api/v1/internal-error", nil, 500},
+		{"not found", "GET", "/test/not-found", nil, 404},
+		{"validation", "POST", "/test/validate", map[string]string{}, 422},
+		{"conflict", "POST", "/test/conflict", nil, 409},
+		{"bad request", "POST", "/test/bad-request", nil, 400},
+		{"internal", "GET", "/test/internal-error", nil, 500},
 	}
 
 	for _, tc := range cases {
@@ -143,7 +132,6 @@ func TestUnifiedErrorContract(t *testing.T) {
 			}
 			req, _ := http.NewRequest(tc.method, tc.path, buf)
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+tok)
 			req.Header.Set("X-Correlation-ID", "contract-test")
 
 			w := httptest.NewRecorder()
@@ -161,29 +149,15 @@ func TestUnifiedErrorContract(t *testing.T) {
 		})
 	}
 
-	t.Run("forbidden", func(t *testing.T) {
-		nonAdmin := signToken(99, rbac.StandardUser, "*", "*", 30*time.Minute)
-		req, _ := http.NewRequest("GET", "/api/v1/admin-only/resource", nil)
-		req.Header.Set("Authorization", "Bearer "+nonAdmin)
-		req.Header.Set("X-Correlation-ID", "forbidden-test")
-		w := httptest.NewRecorder()
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusForbidden {
-			t.Fatalf("expected 403, got %d", w.Code)
-		}
-		resp := parseBody(w)
-		for _, f := range []string{"code", "message", "correlationId"} {
-			if resp[f] == nil || resp[f] == "" {
-				t.Errorf("403 missing '%s'", f)
-			}
-		}
-	})
-
-	t.Run("unauthorized", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/api/v1/not-found", nil)
+	// Test 401 and 403 against the real production router.
+	t.Run("unauthorized via real router", func(t *testing.T) {
+		cfg := config.GetConfig()
+		rr := router.SetupRouter(cfg, nil)
+		req, _ := http.NewRequest("GET", "/api/v1/org/tree", nil)
+		req.RemoteAddr = "127.0.0.1:12345"
 		req.Header.Set("X-Correlation-ID", "unauth-test")
 		w := httptest.NewRecorder()
-		r.ServeHTTP(w, req)
+		rr.ServeHTTP(w, req)
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("expected 401, got %d", w.Code)
 		}

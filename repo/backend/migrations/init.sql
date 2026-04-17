@@ -587,15 +587,40 @@ COMMENT='Connector templates – matches models.ConnectorDefinition';
 -- SEED DATA
 -- =============================================================================
 
--- Default admin user (password: Admin@12345678)
+-- Default users for all roles (password for all: Admin@12345678)
 -- Argon2id hash – the application uses Argon2id (see backend/internal/auth/auth_service.go)
 INSERT INTO users (username, password_hash, role, city_scope, department_scope, status)
-VALUES (
+VALUES
+(
     'admin',
     '$argon2id$v=19$m=65536,t=1,p=4$c29tZXNhbHQ$hash_placeholder',
     'system_admin',
     '*',
     '*',
+    'active'
+),
+(
+    'steward',
+    '$argon2id$v=19$m=65536,t=1,p=4$c29tZXNhbHQ$hash_placeholder',
+    'data_steward',
+    'NYC',
+    'Finance',
+    'active'
+),
+(
+    'analyst',
+    '$argon2id$v=19$m=65536,t=1,p=4$c29tZXNhbHQ$hash_placeholder',
+    'operations_analyst',
+    'NYC',
+    'Finance',
+    'active'
+),
+(
+    'user',
+    '$argon2id$v=19$m=65536,t=1,p=4$c29tZXNhbHQ$hash_placeholder',
+    'standard_user',
+    'NYC',
+    'Finance',
     'active'
 );
 
