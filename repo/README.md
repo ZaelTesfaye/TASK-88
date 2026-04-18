@@ -16,7 +16,7 @@ graph LR
 - **Backend** -- Go REST API using the Gin framework. Handles authentication, RBAC, data operations, media management, scheduling, and integrations.
 - **Database** -- MySQL 8.0 with 27 tables covering users, org hierarchy, master data, ingestion pipelines, media, analytics, audit, security, retention, and connectors.
 
-> This project is fully container-contained. Do not install Go, Node.js, or any runtime dependency on the host. Use `docker compose up --build` exclusively.
+> This project is fully container-contained. Do not install Go, Node.js, or any runtime dependency on the host. Use `docker-compose up --build` exclusively.
 
 ## Prerequisites
 
@@ -31,7 +31,7 @@ No other tools (Go, Node.js, npm) are required on the host machine.
 
 ```bash
 # Clone the repository and start all services
-docker compose up --build
+docker-compose up --build
 ```
 
 Docker Compose will:
@@ -95,7 +95,7 @@ Open http://localhost:3000, log in as `admin` / `Admin@12345678`, confirm the da
 
 ## Default Credentials
 
-All demo users are seeded automatically on `docker compose up`. Password for all accounts: `Admin@12345678`
+All demo users are seeded automatically on `docker-compose up`. Password for all accounts: `Admin@12345678`
 
 | Username   | Role                  | City Scope | Department Scope |
 |------------|-----------------------|------------|------------------|
@@ -108,7 +108,7 @@ All demo users are seeded automatically on `docker compose up`. Password for all
 
 ## Configuration
 
-All backend configuration is passed through environment variables. These are defined in `docker compose.yml` and can be overridden with a `.env` file.
+All backend configuration is passed through environment variables. These are defined in `docker-compose.yml` and can be overridden with a `.env` file.
 
 ### Database
 
@@ -148,7 +148,7 @@ All backend configuration is passed through environment variables. These are def
 
 ### Smoke Check (post-startup, ~30 seconds)
 
-After `docker compose up --build`, run the two curl commands from the "Verify the System is Running" section above. Both should return HTTP 200 with the expected JSON shapes.
+After `docker-compose up --build`, run the two curl commands from the "Verify the System is Running" section above. Both should return HTTP 200 with the expected JSON shapes.
 
 ### Full Test Suite (CI-grade)
 
@@ -157,6 +157,8 @@ The entire test suite runs inside Docker containers with no local toolchain depe
 ```bash
 ./run_tests.sh
 ```
+
+> **Note:** All dependency installation (`npm install`, `go mod download`) occurs **inside Docker containers** and requires no host-level package managers or runtimes. You do not need Go, Node.js, or npm installed on your machine.
 
 This executes:
 1. **Backend compile check** -- `go build` inside a Go Alpine container.
@@ -176,7 +178,7 @@ The backend includes true no-mock API tests that exercise the full production ro
 
 ```bash
 # Run integration tests inside a Docker container with a real test database
-docker compose run --rm \
+docker-compose run --rm \
   -e TEST_DB_DSN="hub_user:hub_password@tcp(mysql:3306)/hub_db?charset=utf8mb4&parseTime=True" \
   backend go test -tags integration ./tests/... -v -count=1 -timeout 120s
 ```
@@ -193,7 +195,7 @@ The test database is auto-migrated and all tables are cleaned between tests.
 
 ### Port conflicts
 
-If `docker compose up` fails with "port already in use":
+If `docker-compose up` fails with "port already in use":
 
 ```bash
 # Check which process is using the port
@@ -207,7 +209,7 @@ netstat -ano | findstr :3000
 netstat -ano | findstr :8080
 netstat -ano | findstr :3306
 
-# Stop the conflicting process, or change ports in docker compose.yml
+# Stop the conflicting process, or change ports in docker-compose.yml
 ```
 
 ### Stale volumes
@@ -216,8 +218,8 @@ If the database has stale data or a corrupted schema from a previous run:
 
 ```bash
 # Remove all containers AND volumes, then rebuild
-docker compose down -v
-docker compose up --build
+docker-compose down -v
+docker-compose up --build
 ```
 
 ### Database boot timing
@@ -226,7 +228,7 @@ MySQL may take 10-30 seconds to initialize on first start. The backend container
 
 ```bash
 # Confirm MySQL is healthy
-docker compose ps
+docker-compose ps
 # Look for "healthy" in the mysql service status
 
 # Then verify the backend is responding
@@ -239,9 +241,9 @@ If a container starts and immediately exits:
 
 ```bash
 # Inspect logs for the failing service
-docker compose logs backend
-docker compose logs mysql
-docker compose logs frontend
+docker-compose logs backend
+docker-compose logs mysql
+docker-compose logs frontend
 ```
 
 Common causes: missing environment variables, DB connection refused (MySQL not ready yet), or port conflicts.
@@ -263,7 +265,7 @@ For subsequent migrations:
 
 ```
 repo/
-+-- docker compose.yml          # Orchestrates all services
++-- docker-compose.yml          # Orchestrates all services
 +-- run_tests.sh                # Global test runner (Docker-only)
 +-- README.md
 |
